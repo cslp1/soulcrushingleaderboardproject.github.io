@@ -4,7 +4,7 @@ const credits = {
     "Developers": ["TheHaloDeveloper"],
     "Managers": ["PrestigeUE", "ThePhantomDevil666", "Spitfire_YT5", "XChocolateMLGX", "jarofjam_14", "DJdestroyer916539", "vt_et", "jumper101110"],
     "Trial Staff": ["..."],
-    "Former Staff": ["arthraix"]
+    "Former Staff": ["arthrix"]
 }
 
 for (let [role, users] of Object.entries(credits)) {
