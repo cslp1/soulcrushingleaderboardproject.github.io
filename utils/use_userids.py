@@ -12,7 +12,7 @@ sheet = service.spreadsheets()
 
 SHEET_ID = "1S707rTmMubRkmDsWcHd6J5DnSol_-gaX3A1MMqkUh-E"
 
-response = requests.get(f"https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/backup!A:A?key={os.getenv('GOOGLE_SHEETS_API_KEY')}")
+response = requests.get(f"https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/backup!A:A?key={os.getenv('fef25144012430043cd849c01837eee338036e3d')}")
 names = response.json().get("values", [])
 
 ids = []
