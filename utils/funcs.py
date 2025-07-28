@@ -1,25 +1,25 @@
 import os
 import requests
+from dotenv import load_dotenv
 
-def get_data(r):
-    url = f"https://sheets.googleapis.com/v4/spreadsheets/1ffz-IFNSEDQay9jkR5JbOj7NPEljBX4jc2oIYzypRLc/values/{r}?key={os.getenv("GOOGLE_SHEETS_API_KEY")}"
-    
-    response = requests.get(url).json()
-    values = response.get("values", [])
-    if len(values) < 2:
+load_dotenv()
+
+API_KEY = os.getenv("GOOGLE_SHEETS_API_KEY")
+SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
+
+def get_data(range_name):
+    url = f"https://sheets.googleapis.com/v4/spreadsheets/{SPREADSHEET_ID}/values/{range_name}?key={API_KEY}"
+    response = requests.get(url)
+    response.raise_for_status()
+    data = response.json()
+    values = data.get("values", [])
+    if not values:
         return []
 
     headers = values[0]
-    data = []
-
-    for row in values[1:]:
-        item = {}
-        for i, header in enumerate(headers):
-            val = row[i] if i < len(row) else ""
-            if header.lower() == "completions":
-                item[header] = [int(x) for x in val.split(",") if x] if val else []
-            else:
-                item[header] = val
-        data.append(item)
-
-    return data
+    rows = values[1:]
+    result = []
+    for row in rows:
+        obj = {headers[i]: row[i] if i < len(row) else "" for i in range(len(headers))}
+        result.append(obj)
+    return result
