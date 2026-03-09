@@ -241,7 +241,8 @@ SC of the Week
 
 Difficulty: {diff_emoji} {diff_name}
 
-Beat this tower <t:{discord_ts}:R> for {tickets} Weekly Tickets!
+Beat this tower <t:{discord_ts}:R> for {tickets} Weekly Points!
+<@&1387969989142909099>
 """
 
     requests.post(WEBHOOK_URL, json={"content": webhook_content})
