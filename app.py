@@ -227,10 +227,10 @@ def refresh_scotw():
 
     diff_name = difficulty_to_name(selection["difficulty"])
     diff_emoji = {
-        "Insane": "<:insane:1306835966765437058>",
-        "Extreme": "<:extreme:1306835963850264598>",
-        "Terrifying": "<:terrifying:1306835967855820810>",
-        "Catastrophic": "<:catastrophic:1306835963166720000>"
+        "Insane": "<:insane:1474764189875835024>",
+        "Extreme": "<:extreme:1474764260067377374>",
+        "Terrifying": "<:terrifying:1474764280984240138>",
+        "Catastrophic": "<:catastrophic:1474764304233533470>"
     }.get(diff_name, "")
 
     discord_ts = int(target_time.timestamp())
