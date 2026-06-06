@@ -11,38 +11,22 @@ from googleapiclient.discovery import build
 from datetime import datetime, timedelta, timezone
 import random
 import atexit
-import requests
 import json
 load_dotenv()
 
-resp = requests.post(
-    "http://51.68.198.167:8080/get_service",
-    json={"key": os.getenv("GOOGLE_SHEETS_API_KEY")}
-)
-resp.raise_for_status()
-service_json_str = resp.json().get("service")
-service_json = json.loads(service_json_str)
-
-if 'private_key' in service_json:
-    key = service_json['private_key']
-    key = key.encode('utf-8').decode('unicode_escape')
-    service_json['private_key'] = key
-
-key = service_json["private_key"].strip()
-
-if not key.endswith("-----END PRIVATE KEY-----"):
-    key = key + "\n-----END PRIVATE KEY-----"
-
-service_json["private_key"] = key
-
-credentials = service_account.Credentials.from_service_account_info(
-    service_json,
+# --- Auth: using your own service_account.json ---
+credentials = service_account.Credentials.from_service_account_file(
+    "service_account.json",
     scopes=["https://www.googleapis.com/auth/spreadsheets"]
 )
 service = build("sheets", "v4", credentials=credentials)
 sheet = service.spreadsheets()
 
-SHEET_ID = "1ffz-IFNSEDQay9jkR5JbOj7NPEljBX4jc2oIYzypRLc"
+# --- Replace this with YOUR Google Sheet ID ---
+SHEET_ID = "YOUR_SHEET_ID_HERE"
+
+# --- Discord webhook from .env ---
+WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 app = Flask(__name__)
 
@@ -127,7 +111,13 @@ for pack in raw_packs:
         "name": pack["name"],
         "towers": t
     })
-        
+
+# NOTE: "cool_members" was fetched from the original author's private server.
+# Replace this with your own data source, or just use an empty list for now.
+cool_members = []
+
+staff = funcs.get_data("credits!A:B")
+
 @app.route("/tower_data")
 def tower_data():
     updated = funcs.get_data("towers!A:E")
@@ -150,8 +140,22 @@ def tower_data_csv():
     response.headers['Content-Disposition'] = 'attachment; filename=tower_data.csv'
     return response
 
-cool_members = requests.get("http://51.68.198.167:8080/cool_members").json()
-staff = funcs.get_data("credits!A:B")
+scotw_points = funcs.get_data("scotwpoints!A:B")
+current_scotw = funcs.get_data("scotw!A:B")[0]
+start_time = datetime.fromtimestamp(int(current_scotw['Time']), tz=timezone.utc)
+target_time = start_time + timedelta(weeks=1)
+
+scotw_chances = {
+    "Insane": 45,
+    "Extreme": 45,
+    "Terrifying": 9,
+    "Catastrophic": 1
+}
+scotw_diffs = []
+for k, v in scotw_chances.items():
+    scotw_diffs.extend([k] * v)
+
+last_webhook_time = None
 
 @app.route("/")
 def home():
@@ -177,29 +181,6 @@ def difficulty_to_name(d):
     if d < 1300: return "Horrific"
     if d < 1400: return "Unreal"
     return "Nil"
-
-scotw_points = funcs.get_data("scotwpoints!A:B")
-current_scotw = funcs.get_data("scotw!A:B")[0]
-start_time = datetime.fromtimestamp(int(current_scotw['Time']), tz=timezone.utc)
-target_time = start_time + timedelta(weeks=1)
-
-scotw_chances = {
-    "Insane": 45,
-    "Extreme": 45,
-    "Terrifying": 9,
-    "Catastrophic": 1
-}
-scotw_diffs = []
-for k, v in scotw_chances.items():
-    scotw_diffs.extend([k] * v)
-
-last_webhook_time = None
-resp = requests.post(
-    "http://51.68.198.167:8080/get_service",
-    json={"key": os.getenv("GOOGLE_SHEETS_API_KEY") + "2"}
-)
-resp.raise_for_status()
-WEBHOOK_URL = resp.json().get("webhook")
 
 def refresh_scotw():
     global current_scotw, start_time, target_time, last_webhook_time
@@ -245,7 +226,8 @@ Beat this tower <t:{discord_ts}:R> for {tickets} Weekly Points!
 <@&1387969989142909099>
 """
 
-    requests.post(WEBHOOK_URL, json={"content": webhook_content})
+    if WEBHOOK_URL:
+        requests.post(WEBHOOK_URL, json={"content": webhook_content})
 
 @app.route("/api/cron/check_scotw")
 def check_scotw():
