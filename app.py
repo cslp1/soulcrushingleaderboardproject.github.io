@@ -14,18 +14,18 @@ import atexit
 import json
 load_dotenv()
 
-# --- Auth: using your own service_account.json ---
-credentials = service_account.Credentials.from_service_account_file(
-    "service_account.json",
+# --- Auth: using GOOGLE_SERVICE_ACCOUNT env variable ---
+service_json = json.loads(os.getenv("GOOGLE_SERVICE_ACCOUNT"))
+credentials = service_account.Credentials.from_service_account_info(
+    service_json,
     scopes=["https://www.googleapis.com/auth/spreadsheets"]
 )
 service = build("sheets", "v4", credentials=credentials)
 sheet = service.spreadsheets()
 
-# --- Replace this with YOUR Google Sheet ID ---
-SHEET_ID = "YOUR_SHEET_ID_HERE"
+SHEET_ID = "1GcbxyVskhfp-reab4yksg74vlsEkMyZIWQE6AkA7jxE"
 
-# --- Discord webhook from .env ---
+# --- Discord webhook from env ---
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 app = Flask(__name__)
@@ -112,10 +112,7 @@ for pack in raw_packs:
         "towers": t
     })
 
-# NOTE: "cool_members" was fetched from the original author's private server.
-# Replace this with your own data source, or just use an empty list for now.
 cool_members = []
-
 staff = funcs.get_data("credits!A:B")
 
 @app.route("/tower_data")
