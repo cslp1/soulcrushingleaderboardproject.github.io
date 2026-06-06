@@ -138,7 +138,8 @@ def tower_data_csv():
     return response
 
 scotw_points = funcs.get_data("scotwpoints!A:B")
-current_scotw = funcs.get_data("scotw!A:B")[0]
+scotw_data = funcs.get_data("scotw!A:B")
+current_scotw = scotw_data[0] if scotw_data else {"Tower": "1", "Time": str(int(datetime.now(tz=timezone.utc).timestamp()))}
 start_time = datetime.fromtimestamp(int(current_scotw['Time']), tz=timezone.utc)
 target_time = start_time + timedelta(weeks=1)
 
