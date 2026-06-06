@@ -2,16 +2,16 @@ import os
 import requests
 
 def get_data(r):
-    url = f"https://sheets.googleapis.com/v4/spreadsheets/1ffz-IFNSEDQay9jkR5JbOj7NPEljBX4jc2oIYzypRLc/values/{r}?key={os.getenv("GOOGLE_SHEETS_API_KEY")}"
+    sheet_id = os.getenv("SHEET_ID")
+    api_key = os.getenv("GOOGLE_SHEETS_API_KEY")
+    url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/{r}?key={api_key}"
     
     response = requests.get(url).json()
     values = response.get("values", [])
     if len(values) < 2:
         return []
-
     headers = values[0]
     data = []
-
     for row in values[1:]:
         item = {}
         for i, header in enumerate(headers):
@@ -21,5 +21,4 @@ def get_data(r):
             else:
                 item[header] = val
         data.append(item)
-
     return data
