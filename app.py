@@ -48,8 +48,9 @@ countries = funcs.get_data("nationalities!A:B")
 countries_map = {}
 
 for c in countries:
-    countries_map[c["username"]] = country_code(c["nationality"])
-
+    if c["nationality"] and c["username"]:
+        countries_map[c["username"]] = country_code(c["nationality"])
+        
 for c in all_completions:
     c["completions"] = list(set(c["completions"]))
 
