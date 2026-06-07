@@ -42,7 +42,7 @@ def country_code(x):
     return country.alpha_2.lower()
 
 all_completions = funcs.get_data("comps!A:C")
-all_towers = funcs.get_data("towers!A:E")
+all_towers = funcs.get_data("towers!A:G")
 all_games = funcs.get_data("games!A:C")
 countries = funcs.get_data("nationalities!A:B")
 countries_map = {}
