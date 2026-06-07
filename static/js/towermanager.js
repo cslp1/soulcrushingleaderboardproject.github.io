@@ -199,7 +199,7 @@ function init_players() {
         }
 
         tbody += `
-            <tr data-name="${p_name.toLowerCase()}">
+            <tr data-name="${p_name.toLowerCase()}" data-nationality="${player.nationality || ''}">
                 <td>#${display_rank}</td>
                 <td><button class="player-button" onclick='open_player("${p_name}", ${display_rank})'>${get_role(p_name, true)}</button></td>
                 <td style="text-align: right;">${third_column}</td>
@@ -211,12 +211,15 @@ function init_players() {
 
 function filter_players() {
     const search = $("#sclp-player-search").val().toLowerCase();
+    const country = $("#country-filter").val();
 
     $("#leaderboard-table tr").each(function () {
         const $row = $(this);
         const name = $row.data("name");
+        const nat = $row.data("nationality");
 
         let visible = name.includes(search);
+        if (country && nat !== country) visible = false;
         $row.toggle(visible);
     });
 }
@@ -315,6 +318,7 @@ $("#sclp-tower-search, #game-select, [id^=diff-], #tower-sort").on("input change
 });
 
 $("#sclp-player-search").on("input", filter_players);
+$("#country-filter").on("change", filter_players);
 $("#checklist-player").on("input", function () {
     filter_towers();
     init_packs();
@@ -587,6 +591,16 @@ function game_from_abbr(abbr) {
 $("#game-select").html("<option value=''>All</option><option value='Place'>Place</option>");
 for (let game of games) {
     $("#game-select").append(`<option value='${game["abbr"]}'>${game["abbr"]}</option>`);
+}
+
+// Populate country filter
+let country_set = new Set();
+for (let player of completions) {
+    if (player.nationality) country_set.add(player.nationality);
+}
+$("#country-filter").html("<option value=''>All Countries</option>");
+for (let country of [...country_set].sort()) {
+    $("#country-filter").append(`<option value="${country}">${country.toUpperCase()}</option>`);
 }
 
 window.addEventListener('popstate', function(event) {
