@@ -344,7 +344,12 @@ function open_tower(id) {
     $("#towerrank").html(tower["rank"]);
     $("#towerxp").html(tower["xp"]);
     $("#towervictors").html(victors_cache[id]);
-    
+    let quality = tower["quality"];
+if (quality) {
+    $("#towerquality").html(`Quality: <span class="quality-${quality.toLowerCase()}">${quality}</span>`);
+} else {
+    $("#towerquality").html("");
+}
     let tower_packs = packs.filter(pack => pack.towers.map(Number).includes(id));
     if (tower_packs.length > 0) {
         let pack_links = tower_packs.map(pack =>
