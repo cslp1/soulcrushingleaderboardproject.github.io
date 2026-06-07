@@ -188,6 +188,13 @@ function init_players() {
             let hardest_diff = hardest_cache[p_name];
             let diff_class = difficulty_to_name(hardest_diff);
             third_column = `<span class="${diff_class}">${formatNumber(hardest_diff / 100)}</span>`;
+            } else if (sort.startsWith("most-")) {
+            } else if (sort.startsWith("most-")) {
+        let diff_name = sort.replace("most-", "");
+        let ranges = {insane:[800,900],extreme:[900,1000],terrifying:[1000,1100],catastrophic:[1100,1200],horrific:[1200,1300],unreal:[1300,9999]};
+        let range = ranges[diff_name];
+        third_column = `${player.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= range[0] && t.difficulty < range[1]; }).length} ${diff_name.charAt(0).toUpperCase() + diff_name.slice(1)}s`;
+    }
         }
 
         tbody += `
