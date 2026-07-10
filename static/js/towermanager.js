@@ -62,10 +62,6 @@ function init_towers() {
         sorted_towers.sort((a, b) => victors_cache[b.id] - victors_cache[a.id] || a.rank - b.rank);
     } else if (sort === "victors-asc") {
         sorted_towers.sort((a, b) => victors_cache[a.id] - victors_cache[b.id] || a.rank - b.rank);
-    } else if (sort === "quality") {
-        sorted_towers.sort((a, b) => (b.quality || "").localeCompare(a.quality || "") || a.rank - b.rank);
-    } else if (sort === "quality-asc") {
-        sorted_towers.sort((a, b) => (a.quality || "").localeCompare(b.quality || "") || a.rank - b.rank);
     }
 
     let tbody = "";
@@ -163,18 +159,6 @@ function init_players() {
         players.sort((a, b) => b.completions.length - a.completions.length || b.total_xp - a.total_xp);
     } else if (sort === "hardest") {
         players.sort((a, b) => hardest_cache[b.username] - hardest_cache[a.username] || b.total_xp - a.total_xp);
-    } else if (sort === "most-insane") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 800 && t.difficulty < 900; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 800 && t.difficulty < 900; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-extreme") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 900 && t.difficulty < 1000; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 900 && t.difficulty < 1000; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-terrifying") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1000 && t.difficulty < 1100; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1000 && t.difficulty < 1100; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-catastrophic") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1100 && t.difficulty < 1200; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1100 && t.difficulty < 1200; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-horrific") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1200 && t.difficulty < 1300; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1200 && t.difficulty < 1300; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-unreal") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1300; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1300; }).length || b.total_xp - a.total_xp);
     }
 
     let tbody = "";
@@ -191,15 +175,10 @@ function init_players() {
             let hardest_diff = hardest_cache[p_name];
             let diff_class = difficulty_to_name(hardest_diff);
             third_column = `<span class="${diff_class}">${formatNumber(hardest_diff / 100)}</span>`;
-        } else if (sort.startsWith("most-")) {
-            let diff_name = sort.replace("most-", "");
-            let ranges = {insane:[800,900],extreme:[900,1000],terrifying:[1000,1100],catastrophic:[1100,1200],horrific:[1200,1300],unreal:[1300,9999]};
-            let range = ranges[diff_name];
-            third_column = `${player.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= range[0] && t.difficulty < range[1]; }).length} ${diff_name.charAt(0).toUpperCase() + diff_name.slice(1)}s`;
         }
 
         tbody += `
-            <tr data-name="${p_name.toLowerCase()}" data-nationality="${player.nationality || ''}">
+            <tr data-name="${p_name.toLowerCase()}">
                 <td>#${display_rank}</td>
                 <td><button class="player-button" onclick='open_player("${p_name}", ${display_rank})'>${get_role(p_name, true)}</button></td>
                 <td style="text-align: right;">${third_column}</td>
@@ -211,15 +190,12 @@ function init_players() {
 
 function filter_players() {
     const search = $("#sclp-player-search").val().toLowerCase();
-    const country = $("#country-filter").val();
 
     $("#leaderboard-table tr").each(function () {
         const $row = $(this);
         const name = $row.data("name");
-        const nat = $row.data("nationality");
 
         let visible = name.includes(search);
-        if (country && nat !== country) visible = false;
         $row.toggle(visible);
     });
 }
@@ -318,7 +294,6 @@ $("#sclp-tower-search, #game-select, [id^=diff-], #tower-sort").on("input change
 });
 
 $("#sclp-player-search").on("input", filter_players);
-$("#country-filter").on("change", filter_players);
 $("#checklist-player").on("input", function () {
     filter_towers();
     init_packs();
@@ -369,14 +344,7 @@ function open_tower(id) {
     $("#towerrank").html(tower["rank"]);
     $("#towerxp").html(tower["xp"]);
     $("#towervictors").html(victors_cache[id]);
-
-    let quality = tower["quality"];
-    if (quality) {
-        $("#towerquality").html(`Quality: <span class="quality-${quality.toLowerCase()}">${quality}</span>`);
-    } else {
-        $("#towerquality").html("");
-    }
-
+    
     let tower_packs = packs.filter(pack => pack.towers.map(Number).includes(id));
     if (tower_packs.length > 0) {
         let pack_links = tower_packs.map(pack =>
@@ -591,16 +559,6 @@ function game_from_abbr(abbr) {
 $("#game-select").html("<option value=''>All</option><option value='Place'>Place</option>");
 for (let game of games) {
     $("#game-select").append(`<option value='${game["abbr"]}'>${game["abbr"]}</option>`);
-}
-
-// Populate country filter
-let country_set = new Set();
-for (let player of completions) {
-    if (player.nationality) country_set.add(player.nationality);
-}
-$("#country-filter").html("<option value=''>All Countries</option>");
-for (let country of [...country_set].sort()) {
-    $("#country-filter").append(`<option value="${country}">${country.toUpperCase()}</option>`);
 }
 
 window.addEventListener('popstate', function(event) {
