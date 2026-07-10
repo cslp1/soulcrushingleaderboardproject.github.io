@@ -154,12 +154,15 @@
                 <div id="right-panel">
                     <div id="packs-header">
                         <h1>Packs</h1>
-                        <select id="pack-sort">
-                            <option value="xp" selected>Bonus XP</option>
-                            <option value="count">Tower Count</option>
-                            <option value="hardest">Hardest Tower</option>
-                            <option value="quality">Quality</option>
-                        </select>
+                        <label>Sort by:
+                            <select id="pack-sort">
+                                <option value="xp" selected>Bonus XP</option>
+                                <option value="count">Tower Count</option>
+                                <option value="hardest">Hardest Tower</option>
+                                <option value="quality">Quality</option>
+                            </select>
+                        </label>
+                        <button id="pack-sort-dir" title="Toggle sort direction">&#8593;</button>
                     </div>
                     <div id="pack-data">
                         <p class="big" id="packname"></p>
