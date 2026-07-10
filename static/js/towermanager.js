@@ -251,12 +251,13 @@ function init_packs() {
 
     let sorted_packs = [...packs];
     if (sort === "count") {
-        sorted_packs.sort((a, b) => b.towers.length - a.towers.length || a.xp - b.xp);
+        sorted_packs.sort((a, b) => a.towers.length - b.towers.length || a.xp - b.xp);
     } else if (sort === "hardest") {
-        sorted_packs.sort((a, b) => b.hardest - a.hardest || a.xp - b.xp);
+        sorted_packs.sort((a, b) => a.hardest - b.hardest || a.xp - b.xp);
     } else if (sort === "quality") {
-        sorted_packs.sort((a, b) => b.quality_rank - a.quality_rank || a.xp - b.xp);
+        sorted_packs.sort((a, b) => a.quality_rank - b.quality_rank || a.xp - b.xp);
     }
+    if (pack_sort_dir === "desc") sorted_packs.reverse();
 
     let player = player_from_name($("#checklist-player").val());
     let tbody = "";
@@ -367,11 +368,21 @@ $("#player-sort").on("change", function() {
 $("#player-sort").val(localStorage.getItem("sclp-player-sort") || "xp");
 $("#tower-sort").val(localStorage.getItem("sclp-tower-sort") || "rank");
 
+let pack_sort_dir = localStorage.getItem("sclp-pack-sort-dir") || "asc";
+
 $("#pack-sort").on("change", function() {
     localStorage.setItem("sclp-pack-sort", $(this).val());
     init_packs();
 });
 $("#pack-sort").val(localStorage.getItem("sclp-pack-sort") || "xp");
+
+$("#pack-sort-dir").on("click", function() {
+    pack_sort_dir = pack_sort_dir === "asc" ? "desc" : "asc";
+    localStorage.setItem("sclp-pack-sort-dir", pack_sort_dir);
+    $(this).html(pack_sort_dir === "asc" ? "&#8593;" : "&#8595;");
+    init_packs();
+});
+$("#pack-sort-dir").html(pack_sort_dir === "asc" ? "&#8593;" : "&#8595;");
 
 function format_location(tower, start, end) {
     const places = tower["places"].slice(start, end);
