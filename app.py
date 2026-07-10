@@ -142,7 +142,7 @@ scotw_points = funcs.get_data("scotwpoints!A:B")
 scotw_data = funcs.get_data("scotw!A:B")
 current_scotw = scotw_data[0] if scotw_data else {"Tower": "1", "Time": str(int(datetime.now(tz=timezone.utc).timestamp()))}
 start_time = datetime.fromtimestamp(int(current_scotw['Time']), tz=timezone.utc)
-target_time = start_time + timedelta(weeks=1)
+target_time = start_time + timedelta(days=1)
 
 scotw_chances = {
     "Insane": 45,
@@ -194,7 +194,7 @@ def refresh_scotw():
     current_scotw['Time'] = str(int(now.timestamp()))
     
     start_time = datetime.fromtimestamp(int(current_scotw['Time']), tz=timezone.utc)
-    target_time = start_time + timedelta(weeks=1)
+    target_time = start_time + timedelta(days=1)
 
     sheet.values().update(
         spreadsheetId=SHEET_ID,
@@ -216,12 +216,12 @@ def refresh_scotw():
     discord_ts = int(target_time.timestamp())
 
     webhook_content = f"""
-SC of the Week
+SC of the Day
 # [{selection['name']}](https://sclp.vercel.app/?t={selection['id']})
 
 Difficulty: {diff_emoji} {diff_name}
 
-Beat this tower <t:{discord_ts}:R> for {tickets} Weekly Points!
+Beat this tower <t:{discord_ts}:R> for {tickets} Points!
 <@&1387969989142909099>
 """
 
@@ -238,7 +238,7 @@ def check_scotw():
         current_scotw['Tower'] = rows[0][0]
         current_scotw['Time'] = rows[0][1]
         start_time_sheet = datetime.fromtimestamp(int(current_scotw['Time']), tz=timezone.utc)
-        target_time = start_time_sheet + timedelta(weeks=1)
+        target_time = start_time_sheet + timedelta(days=1)
 
     now = datetime.now(tz=timezone.utc)
     
