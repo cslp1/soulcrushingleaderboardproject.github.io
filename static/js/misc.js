@@ -145,13 +145,11 @@ function open_page(page_name) {
 open_page("Home");
 
 function init_scotw() {
-    let scotw = tower_from_id(current_scotw.Tower);
-    let diff = difficulty_to_name(scotw.difficulty);
-
-    $("#scotw-title").attr("class", diff);
-    $("#scotw-title").html(`<button class="tower-button" onclick="open_tower(${scotw.id})">${scotw.name}</button>`);
-
-    const lb = scotw_points.map(p => ({ username: p.username, points: +p.points })).sort((a, b) => b.points - a.points || a.username.localeCompare(b.username));
+    // Leaderboard first, so it renders even if the tower lookup fails
+    const lb = (scotw_points || [])
+        .filter(p => p && p.username)
+        .map(p => ({ username: p.username, points: +p.points || 0 }))
+        .sort((a, b) => b.points - a.points || a.username.localeCompare(b.username));
 
     let tbody = "";
     lb.forEach((e, i) => {
@@ -163,8 +161,23 @@ function init_scotw() {
                 <td style="text-align:right;">${e.points} pts</td>
             </tr>`;
     });
+    if (!tbody) {
+        tbody = `<tr><td colspan="3" style="text-align: center; font-style: italic; color: #ccc;">No points earned yet this week</td></tr>`;
+    }
     $("#scotw-table").html(tbody);
     filter_scotw();
+
+    let scotw = tower_from_id(parseInt(current_scotw.Tower));
+    if (!scotw) {
+        console.error("SCoTW: tower id not found:", current_scotw.Tower);
+        $("#scotw-title").text("TOWER OF THE WEEK");
+        $("#scotw-timer").text("No tower selected yet");
+        return;
+    }
+
+    let diff = difficulty_to_name(scotw.difficulty);
+    $("#scotw-title").attr("class", diff);
+    $("#scotw-title").html(`<button class="tower-button" onclick="open_tower(${scotw.id})">${scotw.name}</button>`);
 
     updateTimer();
 }
@@ -172,13 +185,14 @@ function init_scotw() {
 function filter_scotw() {
     const q = $("#scotw-search").val().toLowerCase();
     $("#scotw-table tr").each(function () {
-        $(this).toggle($(this).data("name").includes(q));
+        const name = $(this).data("name");
+        if (name !== undefined) $(this).toggle(String(name).includes(q));
     });
 }
 
 function updateTimer() {
-    const start = new Date(current_scotw.Time * 1000);
-    const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const start = new Date(parseInt(current_scotw.Time) * 1000);
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
     const now = new Date();
 
     const diff = end - now;
@@ -200,10 +214,19 @@ function updateTimer() {
 
 $("#scotw-search").off("input").on("input", filter_scotw);
 let current_scotw;
-fetch("/get_scotw").then(res => res.json()).then(data => {
-    current_scotw = data;
-    init_scotw();
-})
+fetch("/get_scotw")
+    .then(res => {
+        if (!res.ok) throw new Error(`/get_scotw returned ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        current_scotw = data;
+        init_scotw();
+    })
+    .catch(err => {
+        console.error("SCoTW failed to load:", err);
+        $("#scotw-timer").text("Couldn't load Tower of the Week");
+    });
 
 document.getElementById('discord').addEventListener('click', function() {
     window.open('https://discord.gg/t9crQndHyn', '_blank');
