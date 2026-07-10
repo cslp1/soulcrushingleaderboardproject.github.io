@@ -118,7 +118,7 @@ function filter_towers() {
         }
     }
 
-    for (let i = 8; i < 14; i++) {
+    for (let i = 8; i < 15; i++) {
         if ($("#diff-" + i).prop("checked")) {
             allowed_difficulties.push(i);
         }
@@ -174,7 +174,9 @@ function init_players() {
     } else if (sort === "most-horrific") {
         players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1200 && t.difficulty < 1300; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1200 && t.difficulty < 1300; }).length || b.total_xp - a.total_xp);
     } else if (sort === "most-unreal") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1300; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1300; }).length || b.total_xp - a.total_xp);
+        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1300 && t.difficulty < 1400; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1300 && t.difficulty < 1400; }).length || b.total_xp - a.total_xp);
+    } else if (sort === "most-nil") {
+        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1400; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1400; }).length || b.total_xp - a.total_xp);
     }
 
     let tbody = "";
@@ -193,7 +195,7 @@ function init_players() {
             third_column = `<span class="${diff_class}">${formatNumber(hardest_diff / 100)}</span>`;
         } else if (sort.startsWith("most-")) {
             let diff_name = sort.replace("most-", "");
-            let ranges = {insane:[800,900],extreme:[900,1000],terrifying:[1000,1100],catastrophic:[1100,1200],horrific:[1200,1300],unreal:[1300,9999]};
+            let ranges = {insane:[800,900],extreme:[900,1000],terrifying:[1000,1100],catastrophic:[1100,1200],horrific:[1200,1300],unreal:[1300,1400],nil:[1400,9999]};
             let range = ranges[diff_name];
             third_column = `${player.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= range[0] && t.difficulty < range[1]; }).length} ${diff_name.charAt(0).toUpperCase() + diff_name.slice(1)}s`;
         }
@@ -582,8 +584,9 @@ function open_player(name, rank) {
     `;
     $("#difficulty-progress").html(row);
 
-    for (let d = 8; d < 14; d++) {
+    for (let d = 8; d < 15; d++) {
         let diff = difficulty_to_name(d * 100);
+        if (!dp[diff]) continue;
         row = `
             <tr>
                 <td class="${diff}">${diff}</td>
