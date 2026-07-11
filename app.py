@@ -58,7 +58,7 @@ for tower in all_towers:
         print(f"Skipping tower with bad id/difficulty: {tower.get('name', '?')}")
         continue
     valid_towers.append(tower)
-    tower["xp"] = (3 ** ((tower["difficulty"] - 800) / 100)) * 100
+    tower["xp"] = round((3 ** ((tower["difficulty"] - 800) / 100)) * 100, 2)
     
     raw = tower.get("places", "").strip()
     if not raw or raw == ";":
