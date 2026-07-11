@@ -492,12 +492,6 @@ p {
     box-shadow: 0 6px 20px rgba(0,0,0,0.4);
 }
 
-.badge {
-    height: 1.2em;
-    vertical-align: middle;
-    padding-left: 5px;
-}
-
 #difficulty-progress, #playercompletions, #towervictorstable {
     text-align: left;
 }
