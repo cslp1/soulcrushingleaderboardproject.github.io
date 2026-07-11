@@ -427,7 +427,7 @@ function open_tower(id) {
     $("#towerlocation").html(format_location(tower, 0, 1));
     $("#otherlocations").html(tower["places"].length > 1 ? `<i>Other Locations: ${format_location(tower, 1, tower["places"].length)}</i>` : "");
     $("#towerrank").html(tower["rank"]);
-    $("#towerxp").html(tower["xp"]);
+    $("#towerxp").html(formatNumber(tower["xp"]));
     $("#towervictors").html(victors_cache[id]);
 
     let quality = tower["quality"];
