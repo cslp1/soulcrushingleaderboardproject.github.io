@@ -1,3 +1,5 @@
+const DIFF_RANGES = {easy:[100,200],medium:[200,300],hard:[300,400],difficult:[400,500],challenging:[500,600],intense:[600,700],remorseless:[700,800]};
+
 let victors_cache = {};
 let hardest_cache = {};
 let tower_lookup = {};
@@ -118,7 +120,7 @@ function filter_towers() {
         }
     }
 
-    for (let i = 8; i < 15; i++) {
+    for (let i = 1; i < 8; i++) {
         if ($("#diff-" + i).prop("checked")) {
             allowed_difficulties.push(i);
         }
@@ -163,20 +165,12 @@ function init_players() {
         players.sort((a, b) => b.completions.length - a.completions.length || b.total_xp - a.total_xp);
     } else if (sort === "hardest") {
         players.sort((a, b) => hardest_cache[b.username] - hardest_cache[a.username] || b.total_xp - a.total_xp);
-    } else if (sort === "most-insane") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 800 && t.difficulty < 900; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 800 && t.difficulty < 900; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-extreme") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 900 && t.difficulty < 1000; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 900 && t.difficulty < 1000; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-terrifying") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1000 && t.difficulty < 1100; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1000 && t.difficulty < 1100; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-catastrophic") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1100 && t.difficulty < 1200; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1100 && t.difficulty < 1200; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-horrific") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1200 && t.difficulty < 1300; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1200 && t.difficulty < 1300; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-unreal") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1300 && t.difficulty < 1400; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1300 && t.difficulty < 1400; }).length || b.total_xp - a.total_xp);
-    } else if (sort === "most-nil") {
-        players.sort((a, b) => b.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1400; }).length - a.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= 1400; }).length || b.total_xp - a.total_xp);
+    } else if (sort.startsWith("most-")) {
+        let range = DIFF_RANGES[sort.replace("most-", "")];
+        if (range) {
+            let count_in = p => p.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= range[0] && t.difficulty < range[1]; }).length;
+            players.sort((a, b) => count_in(b) - count_in(a) || b.total_xp - a.total_xp);
+        }
     }
 
     let tbody = "";
@@ -188,15 +182,14 @@ function init_players() {
         if (sort === "xp") {
             third_column = `Level ${format_level(p_xp, true)}`;
         } else if (sort === "completions") {
-            third_column = `${player["completions"].length} SCs`;
+            third_column = `${player["completions"].length} NSCs`;
         } else if (sort === "hardest") {
             let hardest_diff = hardest_cache[p_name];
             let diff_class = difficulty_to_name(hardest_diff);
             third_column = `<span class="${diff_class}">${formatNumber(hardest_diff / 100)}</span>`;
         } else if (sort.startsWith("most-")) {
             let diff_name = sort.replace("most-", "");
-            let ranges = {insane:[800,900],extreme:[900,1000],terrifying:[1000,1100],catastrophic:[1100,1200],horrific:[1200,1300],unreal:[1300,1400],nil:[1400,9999]};
-            let range = ranges[diff_name];
+            let range = DIFF_RANGES[diff_name];
             third_column = `${player.completions.filter(id => { let t = tower_lookup[id]; return t && t.difficulty >= range[0] && t.difficulty < range[1]; }).length} ${diff_name.charAt(0).toUpperCase() + diff_name.slice(1)}s`;
         }
 
@@ -236,7 +229,7 @@ function init_packs() {
         let total_count = pack.towers.length;
         let pack_towers = pack.towers.map(id => tower_lookup[parseInt(id)]).filter(t => t);
         let tower_xp = pack_towers.map(t => t.xp);
-        pack["xp"] = total_count ? Math.floor(tower_xp.reduce((sum, xp) => sum + xp, 0) / total_count) : 0;
+        pack["xp"] = total_count ? tower_xp.reduce((sum, xp) => sum + xp, 0) / total_count : 0;
         pack["hardest"] = pack_towers.reduce((max, t) => Math.max(max, t.difficulty), 0);
 
         let best = -1;
@@ -473,7 +466,7 @@ function open_tower(id) {
     }
     
     if (!hasVictors) {
-        let row = `<tr><td colspan="3" style="text-align: center; font-style: italic; color: #ccc;">No SCLP victors yet</td></tr>`;
+        let row = `<tr><td colspan="3" style="text-align: center; font-style: italic; color: #ccc;">No NSCLP victors yet</td></tr>`;
         $("#towervictorstable").append(row);
     }
 
@@ -598,7 +591,7 @@ function open_player(name, rank) {
     `;
     $("#difficulty-progress").html(row);
 
-    for (let d = 8; d < 15; d++) {
+    for (let d = 1; d < 8; d++) {
         let diff = difficulty_to_name(d * 100);
         if (!dp[diff]) continue;
         row = `
