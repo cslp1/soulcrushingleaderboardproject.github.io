@@ -265,6 +265,7 @@ function init_packs() {
     let tbody = "";
     sorted_packs.forEach(pack => {
         let completed_count = player ? pack.towers.filter(id => player.completions.includes(parseInt(id))).length : 0;
+        let pack_done = player && pack.towers.length > 0 && completed_count === pack.towers.length;
 
         let third_column;
         if (sort === "hardest") {
@@ -277,15 +278,27 @@ function init_packs() {
             third_column = `${formatNumber(pack["xp"])} XP`;
         }
 
+        let row_style = pack_done ? ` style="opacity: 0.45;"` : "";
+        let name_style = pack_done ? ` style="text-decoration: line-through; color: grey;"` : "";
+
         tbody += `
-            <tr>
-                <td><button class="pack-button" onclick="open_pack('${pack.id}')">${pack.name}</button></td>
+            <tr data-name="${pack.name.toLowerCase()}"${row_style}>
+                <td><button class="pack-button"${name_style} onclick="open_pack('${pack.id}')">${pack.name}</button></td>
                 <td style="text-align: right;">${completed_count}/${pack.towers.length}</td>
                 <td style="text-align: right;">${third_column}</td>
             </tr>
         `;
     });
     $("#packs-table").html(tbody);
+    filter_packs();
+}
+
+function filter_packs() {
+    const q = ($("#sclp-pack-search").val() || "").toLowerCase();
+    $("#packs-table tr").each(function () {
+        const name = $(this).data("name");
+        if (name !== undefined) $(this).toggle(String(name).includes(q));
+    });
 }
 
 function open_pack(id) {
@@ -371,6 +384,8 @@ $("#player-sort").val(localStorage.getItem("sclp-player-sort") || "xp");
 $("#tower-sort").val(localStorage.getItem("sclp-tower-sort") || "rank");
 
 let pack_sort_dir = localStorage.getItem("sclp-pack-sort-dir") || "asc";
+
+$("#sclp-pack-search").on("input", filter_packs);
 
 $("#pack-sort").on("change", function() {
     localStorage.setItem("sclp-pack-sort", $(this).val());
