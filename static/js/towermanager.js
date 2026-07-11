@@ -278,12 +278,11 @@ function init_packs() {
             third_column = `${formatNumber(pack["xp"])} XP`;
         }
 
-        let row_style = pack_done ? ` style="opacity: 0.45;"` : "";
-        let name_style = pack_done ? ` style="text-decoration: line-through; color: grey;"` : "";
+        let row_class = pack_done ? ` class="pack-completed"` : "";
 
         tbody += `
-            <tr data-name="${pack.name.toLowerCase()}"${row_style}>
-                <td><button class="pack-button"${name_style} onclick="open_pack('${pack.id}')">${pack.name}</button></td>
+            <tr data-name="${pack.name.toLowerCase()}"${row_class}>
+                <td><button class="pack-button" onclick="open_pack('${pack.id}')">${pack.name}</button></td>
                 <td style="text-align: right;">${completed_count}/${pack.towers.length}</td>
                 <td style="text-align: right;">${third_column}</td>
             </tr>
