@@ -13,7 +13,7 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCLP Official</title>
+    <title>NSCLP Official</title>
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flag-icons/css/flag-icons.min.css"/>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat">
@@ -34,7 +34,7 @@
             </div>
         </div>
         <div id="home-page">
-            <h1>Soul Crushing Leaderboard Project</h1>
+            <h1>Non-Soul Crushing Leaderboard Project</h1>
             <h2>
                 <a href="https://discord.gg/t9crQndHyn" target="_blank">Join the Discord Server to submit completions</a>
             </h2>
@@ -56,13 +56,13 @@
                         <div class="filter-section" id="difficulty-filter">
                             <p>Difficulty:</p>
                             <div class="checkbox-group">
-                                <label><input type="checkbox" id="diff-8" checked> Insane</label>
-                                <label><input type="checkbox" id="diff-9" checked> Extreme</label>
-                                <label><input type="checkbox" id="diff-10" checked> Terrifying</label>
-                                <label><input type="checkbox" id="diff-11" checked> Catastrophic</label>
-                                <label><input type="checkbox" id="diff-12" checked> Horrific</label>
-                                <label><input type="checkbox" id="diff-13" checked> Unreal</label>
-                                <label><input type="checkbox" id="diff-14" checked> Nil</label>
+                                <label><input type="checkbox" id="diff-1" checked> Easy</label>
+                                <label><input type="checkbox" id="diff-2" checked> Medium</label>
+                                <label><input type="checkbox" id="diff-3" checked> Hard</label>
+                                <label><input type="checkbox" id="diff-4" checked> Difficult</label>
+                                <label><input type="checkbox" id="diff-5" checked> Challenging</label>
+                                <label><input type="checkbox" id="diff-6" checked> Intense</label>
+                                <label><input type="checkbox" id="diff-7" checked> Remorseless</label>
                             </div>
                         </div>
                         <div class="filter-section" id="game-filter">
@@ -111,15 +111,15 @@
                         <input type="text" id="sclp-player-search" placeholder="Search...">
                         <select id="player-sort">
                             <option value="xp">By Level/XP</option>
-                            <option value="completions">Most SCs</option>
+                            <option value="completions">Most NSCs</option>
                             <option value="hardest">Hardest Tower</option>
-                            <option value="most-insane">Most Insanes</option>
-                            <option value="most-extreme">Most Extremes</option>
-                            <option value="most-terrifying">Most Terrifyings</option>
-                            <option value="most-catastrophic">Most Catastrophics</option>
-                            <option value="most-horrific">Most Horrifics</option>
-                            <option value="most-unreal">Most Unreals</option>
-                            <option value="most-nil">Most Nils</option>
+                            <option value="most-easy">Most Easies</option>
+                            <option value="most-medium">Most Mediums</option>
+                            <option value="most-hard">Most Hards</option>
+                            <option value="most-difficult">Most Difficults</option>
+                            <option value="most-challenging">Most Challengings</option>
+                            <option value="most-intense">Most Intenses</option>
+                            <option value="most-remorseless">Most Remorselesses</option>
                         </select>
                         <select id="country-filter">
                             <option value="">All Countries</option>
@@ -182,22 +182,6 @@
                 </div>
             </div>
         </div>
-        <div id="scotw-page" style="display:none;">
-            <div id="scotw-container">
-                <div id="scotw-header">
-                    <h1 id="scotw-title">TOWER OF THE WEEK</h1>
-                    <p id="scotw-timer">Next tower in: 5d 12h 34m</p>
-                </div>
-        
-                <div id="scotw-search-wrapper">
-                    <input type="text" id="scotw-search" placeholder="Search player...">
-                </div>
-        
-                <div id="scotw-leaderboard">
-                    <table id="scotw-table"></table>
-                </div>
-            </div>
-        </div>
     </div>
 
     <script>
@@ -207,7 +191,6 @@
         packs = {{ packs | tojson }};
         cool_members = {{ cool_members | tojson }};
         rawcredits = {{ credits | tojson }};
-        scotw_points = {{ scotw_points | tojson }};
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
