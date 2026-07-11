@@ -515,32 +515,6 @@ function get_role(x, t=false) {
     return t ? x : "";
 }
 
-function add_badges(rank, role, comps) {
-    let e = document.getElementById("playername");
-    if (rank <= 3) {
-        e.innerHTML += `<img src='/static/images/badges/top${rank}.png' class="badge">`;
-    }
-
-    if (role != "" && !role.includes("Former")) {
-        e.innerHTML += `<img src='/static/images/badges/staff.png' class="badge">`;
-    }
-
-    let scs = comps.length;
-    let sc_levels = [50, 100, 200, 300, 400, 500];
-    let sc_badge = "";
-    for (let level of sc_levels) {
-        if (scs >= level) {
-            sc_badge = `<img src='/static/images/badges/${level}.png' class="badge">`;
-        }
-    }
-    e.innerHTML += sc_badge;
-
-    let hardest_diff = get_hardest_tower(comps);
-    if (hardest_diff >= 1100) {
-        e.innerHTML += `<img src='/static/images/badges/${difficulty_to_name(hardest_diff).toLowerCase()}.png' class="badge">`;
-    }
-}
-
 let dp = {};
 function get_dp(comps) {
     dp = {};
@@ -634,7 +608,6 @@ function open_player(name, rank) {
         $("#playerpacks").html("<p style='color: #ccc; font-style: italic;'>No packs completed</p>");
     }
 
-    add_badges(player["rank"], role, comps);
 
     const newUrl = `${window.location.pathname}?u=${encodeURIComponent(name)}`;
     window.history.pushState({type: 'player', name: name}, '', newUrl);
