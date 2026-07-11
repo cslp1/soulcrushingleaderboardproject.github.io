@@ -144,8 +144,7 @@ function open_page(page_name) {
 }
 open_page("Home");
 
-function init_scotw() {
-    // Leaderboard first, so it renders even if the tower lookup fails
+function render_scotw_leaderboard() {
     const lb = (scotw_points || [])
         .filter(p => p && p.username)
         .map(p => ({ username: p.username, points: +p.points || 0 }))
@@ -162,11 +161,13 @@ function init_scotw() {
             </tr>`;
     });
     if (!tbody) {
-        tbody = `<tr><td colspan="3" style="text-align: center; font-style: italic; color: #ccc;">No points earned yet this week</td></tr>`;
+        tbody = `<tr><td colspan="3" style="text-align: center; font-style: italic; color: #ccc;">No points earned yet</td></tr>`;
     }
     $("#scotw-table").html(tbody);
     filter_scotw();
+}
 
+function init_scotw() {
     let scotw = tower_from_id(parseInt(current_scotw.Tower));
     if (!scotw) {
         console.error("SCoTW: tower id not found:", current_scotw.Tower);
@@ -214,6 +215,12 @@ function updateTimer() {
 
 $("#scotw-search").off("input").on("input", filter_scotw);
 let current_scotw;
+
+// Runs after all scripts have loaded (get_role lives in towermanager.js)
+$(function () {
+    render_scotw_leaderboard();
+});
+
 fetch("/get_scotw")
     .then(res => {
         if (!res.ok) throw new Error(`/get_scotw returned ${res.status}`);
@@ -225,7 +232,7 @@ fetch("/get_scotw")
     })
     .catch(err => {
         console.error("SCoTW failed to load:", err);
-        $("#scotw-timer").text("Couldn't load Tower of the Week");
+        $("#scotw-timer").text(`Couldn't load Tower of the Week (${err.message})`);
     });
 
 document.getElementById('discord').addEventListener('click', function() {
