@@ -49,9 +49,15 @@ for c in countries:
 for c in all_completions:
     c["completions"] = list(set(c["completions"]))
 
+valid_towers = []
 for tower in all_towers:
-    tower["id"] = int(tower["id"])
-    tower["difficulty"] = int(tower["difficulty"])
+    try:
+        tower["id"] = int(tower["id"])
+        tower["difficulty"] = int(tower["difficulty"])
+    except (ValueError, TypeError):
+        print(f"Skipping tower with bad id/difficulty: {tower.get('name', '?')}")
+        continue
+    valid_towers.append(tower)
     tower["xp"] = (3 ** ((tower["difficulty"] - 800) / 100)) * 100
     
     raw = tower.get("places", "").strip()
@@ -73,6 +79,7 @@ for tower in all_towers:
     else:
         tower["places"].append(["Place", ""])
     
+all_towers = valid_towers
 tower_xp = {t["id"]: t["xp"] for t in all_towers}
 for c in all_completions:
     try:
