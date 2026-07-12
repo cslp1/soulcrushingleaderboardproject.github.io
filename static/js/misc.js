@@ -67,13 +67,12 @@ function getAbbr(x) {
 }
 
 function difficulty_to_name(d) {
-    if (d < 200) return "Easy";
-    if (d < 300) return "Medium";
-    if (d < 400) return "Hard";
-    if (d < 500) return "Difficult";
-    if (d < 600) return "Challenging";
-    if (d < 700) return "Intense";
-    if (d < 800) return "Remorseless";
+    if (d < 900) return "Insane";
+    if (d < 1000) return "Extreme";
+    if (d < 1100) return "Terrifying";
+    if (d < 1200) return "Catastrophic";
+    if (d < 1300) return "Horrific";
+    if (d < 1400) return "Unreal";
     return "Nil";
 }
 
@@ -97,7 +96,7 @@ function calculate_bonus_xp(completions) {
     let completed_packs = packs.filter(pack => pack.towers.every(id => completions.includes(parseInt(id))));
     completed_packs.forEach(pack => {
         let tower_xp = pack.towers.map(id => towers.find(t => t.id === parseInt(id))?.xp || 0);
-        let pack_bonus = pack.towers.length ? tower_xp.reduce((sum, xp) => sum + xp, 0) / pack.towers.length : 0;
+        let pack_bonus = pack.towers.length ? Math.floor(tower_xp.reduce((sum, xp) => sum + xp, 0) / pack.towers.length) : 0;
         bonus_xp += pack_bonus;
     });
     return bonus_xp;
@@ -132,7 +131,7 @@ inputs.forEach(input => {
     input.setAttribute("spellcheck", false);
 });
 
-let pages = ["Home", "Towers", "Leaderboard", "Packs"];
+let pages = ["Home", "Towers", "Leaderboard", "Packs", "SCoTW"];
 for (let page of pages) {
     $("#links").append(`<button class="seamless-button" onclick="open_page('${page}')">${page}</button>`);
 }
@@ -144,6 +143,90 @@ function open_page(page_name) {
     $(`#${page_name.toLowerCase()}-page`).css("display", "");
 }
 open_page("Home");
+
+function init_scotw() {
+    // Leaderboard first, so it renders even if the tower lookup fails
+    const lb = (scotw_points || [])
+        .filter(p => p && p.username)
+        .map(p => ({ username: p.username, points: +p.points || 0 }))
+        .sort((a, b) => b.points - a.points || a.username.localeCompare(b.username));
+
+    let tbody = "";
+    lb.forEach((e, i) => {
+        const rank = i + 1;
+        tbody += `
+            <tr data-name="${e.username.toLowerCase()}">
+                <td>#${rank}</td>
+                <td><button class="player-button" onclick='open_player("${e.username}", ${rank})'>${get_role(e.username, true)}</button></td>
+                <td style="text-align:right;">${e.points} pts</td>
+            </tr>`;
+    });
+    if (!tbody) {
+        tbody = `<tr><td colspan="3" style="text-align: center; font-style: italic; color: #ccc;">No points earned yet this week</td></tr>`;
+    }
+    $("#scotw-table").html(tbody);
+    filter_scotw();
+
+    let scotw = tower_from_id(parseInt(current_scotw.Tower));
+    if (!scotw) {
+        console.error("SCoTW: tower id not found:", current_scotw.Tower);
+        $("#scotw-title").text("TOWER OF THE WEEK");
+        $("#scotw-timer").text("No tower selected yet");
+        return;
+    }
+
+    let diff = difficulty_to_name(scotw.difficulty);
+    $("#scotw-title").attr("class", diff);
+    $("#scotw-title").html(`<button class="tower-button" onclick="open_tower(${scotw.id})">${scotw.name}</button>`);
+
+    updateTimer();
+}
+
+function filter_scotw() {
+    const q = $("#scotw-search").val().toLowerCase();
+    $("#scotw-table tr").each(function () {
+        const name = $(this).data("name");
+        if (name !== undefined) $(this).toggle(String(name).includes(q));
+    });
+}
+
+function updateTimer() {
+    const start = new Date(parseInt(current_scotw.Time) * 1000);
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    const now = new Date();
+
+    const diff = end - now;
+
+    if (diff <= 0) {
+        $("#scotw-timer").text("Updating...");
+        return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    $("#scotw-timer").text(`Next tower in: ${days}d ${hours}h ${minutes}m ${seconds}s`);
+
+    setTimeout(updateTimer, 1000);
+}
+
+$("#scotw-search").off("input").on("input", filter_scotw);
+let current_scotw;
+fetch("/get_scotw")
+    .then(res => {
+        if (!res.ok) throw new Error(`/get_scotw returned ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        current_scotw = data;
+        init_scotw();
+    })
+    .catch(err => {
+        console.error("SCoTW failed to load:", err);
+        $("#scotw-timer").text("Couldn't load Tower of the Week");
+    });
 
 document.getElementById('discord').addEventListener('click', function() {
     window.open('https://discord.gg/t9crQndHyn', '_blank');
