@@ -3,11 +3,13 @@ import os
 from dotenv import load_dotenv
 import utils.funcs as funcs
 import math
+import requests
 import pycountry
 import time
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from datetime import datetime, timedelta, timezone
+import random
 import atexit
 import json
 load_dotenv()
@@ -22,6 +24,9 @@ service = build("sheets", "v4", credentials=credentials)
 sheet = service.spreadsheets()
 
 SHEET_ID = "1GcbxyVskhfp-reab4yksg74vlsEkMyZIWQE6AkA7jxE"
+
+# --- Discord webhook from env ---
+WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 app = Flask(__name__)
 
@@ -49,16 +54,10 @@ for c in countries:
 for c in all_completions:
     c["completions"] = list(set(c["completions"]))
 
-valid_towers = []
 for tower in all_towers:
-    try:
-        tower["id"] = int(tower["id"])
-        tower["difficulty"] = int(tower["difficulty"])
-    except (ValueError, TypeError):
-        print(f"Skipping tower with bad id/difficulty: {tower.get('name', '?')}")
-        continue
-    valid_towers.append(tower)
-    tower["xp"] = round((3 ** ((tower["difficulty"] - 800) / 100)) * 100, 2)
+    tower["id"] = int(tower["id"])
+    tower["difficulty"] = int(tower["difficulty"])
+    tower["xp"] = math.floor((3 ** ((tower["difficulty"] - 800) / 100)) * 100)
     
     raw = tower.get("places", "").strip()
     if not raw or raw == ";":
@@ -79,7 +78,6 @@ for tower in all_towers:
     else:
         tower["places"].append(["Place", ""])
     
-all_towers = valid_towers
 tower_xp = {t["id"]: t["xp"] for t in all_towers}
 for c in all_completions:
     try:
@@ -140,10 +138,27 @@ def tower_data_csv():
     response.headers['Content-Disposition'] = 'attachment; filename=tower_data.csv'
     return response
 
+scotw_points = funcs.get_data("scotwpoints!A:B")
+scotw_data = funcs.get_data("scotw!A:B")
+current_scotw = scotw_data[0] if scotw_data else {"Tower": "1", "Time": str(int(datetime.now(tz=timezone.utc).timestamp()))}
+start_time = datetime.fromtimestamp(int(current_scotw['Time']), tz=timezone.utc)
+target_time = start_time + timedelta(days=1)
+
+scotw_chances = {
+    "Insane": 45,
+    "Extreme": 45,
+    "Terrifying": 9,
+    "Catastrophic": 1
+}
+scotw_diffs = []
+for k, v in scotw_chances.items():
+    scotw_diffs.extend([k] * v)
+
+last_webhook_time = None
 
 @app.route("/")
 def home():
-    return render_template("index.html", all_completions=all_completions, all_towers=all_towers, all_games=all_games, cool_members=cool_members, packs=packs, credits=staff)
+    return render_template("index.html", all_completions=all_completions, all_towers=all_towers, all_games=all_games, cool_members=cool_members, packs=packs, credits=staff, scotw_points=scotw_points)
 
 @app.route("/static/<path:filename>")
 def static_files(filename):
@@ -153,15 +168,93 @@ def static_files(filename):
     response.headers['Expires'] = '0'
     return response
 
+@app.route("/favicon.ico")
+def favicon():
+    return app.send_static_file("images/sclp.png")
+
 def difficulty_to_name(d):
-    if d < 200: return "Easy"
-    if d < 300: return "Medium"
-    if d < 400: return "Hard"
-    if d < 500: return "Difficult"
-    if d < 600: return "Challenging"
-    if d < 700: return "Intense"
-    if d < 800: return "Remorseless"
+    if d < 900: return "Insane"
+    if d < 1000: return "Extreme"
+    if d < 1100: return "Terrifying"
+    if d < 1200: return "Catastrophic"
+    if d < 1300: return "Horrific"
+    if d < 1400: return "Unreal"
     return "Nil"
+
+def refresh_scotw():
+    global current_scotw, start_time, target_time, last_webhook_time
+
+    now = datetime.now(tz=timezone.utc)
+    
+    diff = random.choice(scotw_diffs)
+    tower_set = [t for t in all_towers if difficulty_to_name(t["difficulty"]) == diff]   
+    selection = random.choice(tower_set)
+
+    current_scotw['Tower'] = selection["id"]
+    current_scotw['Time'] = str(int(now.timestamp()))
+    
+    start_time = datetime.fromtimestamp(int(current_scotw['Time']), tz=timezone.utc)
+    target_time = start_time + timedelta(days=1)
+
+    sheet.values().update(
+        spreadsheetId=SHEET_ID,
+        range="scotw!A2:B2",
+        valueInputOption="RAW",
+        body={"values": [[current_scotw['Tower'], current_scotw['Time']]]}
+    ).execute()
+
+    tickets = math.floor((3 ** ((selection["difficulty"] - 800) / 100)) * 100 / 100)
+
+    diff_name = difficulty_to_name(selection["difficulty"])
+    diff_emoji = {
+        "Insane": "<:insane:1474764189875835024>",
+        "Extreme": "<:extreme:1474764260067377374>",
+        "Terrifying": "<:terrifying:1474764280984240138>",
+        "Catastrophic": "<:catastrophic:1474764304233533470>"
+    }.get(diff_name, "")
+
+    discord_ts = int(target_time.timestamp())
+
+    webhook_content = f"""
+SC of the Day
+# [{selection['name']}](https://sclp.vercel.app/?t={selection['id']})
+
+Difficulty: {diff_emoji} {diff_name}
+
+Beat this tower <t:{discord_ts}:R> for {tickets} Points!
+<@&1387969989142909099>
+"""
+
+    if WEBHOOK_URL:
+        requests.post(WEBHOOK_URL, json={"content": webhook_content})
+
+@app.route("/api/cron/check_scotw")
+def check_scotw():
+    global target_time
+    
+    sheet_data = sheet.values().get(spreadsheetId=SHEET_ID, range="scotw!A2:B2").execute()
+    rows = sheet_data.get('values', [])
+    if rows:
+        current_scotw['Tower'] = rows[0][0]
+        current_scotw['Time'] = rows[0][1]
+        start_time_sheet = datetime.fromtimestamp(int(current_scotw['Time']), tz=timezone.utc)
+        target_time = start_time_sheet + timedelta(days=1)
+
+    now = datetime.now(tz=timezone.utc)
+    
+    if now >= target_time:
+        refresh_scotw()
+        return jsonify({"status": "refreshed", "tower": current_scotw['Tower']})
+    
+    return jsonify({"status": "waiting", "target": str(target_time)})
+
+@app.route("/get_scotw")
+def get_scotw():
+    sheet_data = sheet.values().get(spreadsheetId=SHEET_ID, range="scotw!A2:B2").execute()
+    rows = sheet_data.get('values', [])
+    if rows:
+        return jsonify({"Tower": rows[0][0], "Time": rows[0][1]})
+    return jsonify(current_scotw)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True, port=5000)
