@@ -1,4 +1,4 @@
-const DIFF_RANGES = {easy:[100,200],medium:[200,300],hard:[300,400],difficult:[400,500],challenging:[500,600],intense:[600,700],remorseless:[700,800]};
+const DIFF_RANGES = {insane:[800,900],extreme:[900,1000],terrifying:[1000,1100],catastrophic:[1100,1200],horrific:[1200,1300],unreal:[1300,1400],nil:[1400,9999]};
 
 let victors_cache = {};
 let hardest_cache = {};
@@ -120,7 +120,7 @@ function filter_towers() {
         }
     }
 
-    for (let i = 1; i < 8; i++) {
+    for (let i = 8; i < 15; i++) {
         if ($("#diff-" + i).prop("checked")) {
             allowed_difficulties.push(i);
         }
@@ -229,7 +229,7 @@ function init_packs() {
         let total_count = pack.towers.length;
         let pack_towers = pack.towers.map(id => tower_lookup[parseInt(id)]).filter(t => t);
         let tower_xp = pack_towers.map(t => t.xp);
-        pack["xp"] = total_count ? tower_xp.reduce((sum, xp) => sum + xp, 0) / total_count : 0;
+        pack["xp"] = total_count ? Math.floor(tower_xp.reduce((sum, xp) => sum + xp, 0) / total_count) : 0;
         pack["hardest"] = pack_towers.reduce((max, t) => Math.max(max, t.difficulty), 0);
 
         let best = -1;
@@ -565,7 +565,7 @@ function open_player(name, rank) {
     `;
     $("#difficulty-progress").html(row);
 
-    for (let d = 1; d < 8; d++) {
+    for (let d = 8; d < 15; d++) {
         let diff = difficulty_to_name(d * 100);
         if (!dp[diff]) continue;
         row = `
