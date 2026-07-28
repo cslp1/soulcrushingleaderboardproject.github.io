@@ -153,6 +153,10 @@ def static_files(filename):
     response.headers['Expires'] = '0'
     return response
 
+@app.route("/favicon.ico")
+def favicon():
+    return app.send_static_file("images/sclp.png")
+
 def difficulty_to_name(d):
     if d < 900: return "Insane"
     if d < 1000: return "Extreme"
