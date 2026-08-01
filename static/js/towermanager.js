@@ -126,10 +126,10 @@ function filter_towers() {
 
     $("#searchmenu-table tr").each(function () {
         const $row = $(this);
-        const name = $row.data("name");
-        const abbr = $row.data("abbr");
+        const name = String($row.data("name") ?? "");
+        const abbr = String($row.data("abbr") ?? "");
         const diff = +$row.data("diff");
-        const places = $row.data("places");
+        const places = String($row.data("places") ?? "");
 
         let visible = true;
 
@@ -215,8 +215,10 @@ function filter_players() {
 
     $("#leaderboard-table tr").each(function () {
         const $row = $(this);
-        const name = $row.data("name");
-        const nat = $row.data("nationality");
+        // jQuery .data() converts numeric-looking values to numbers, and a
+        // purely numeric username would then break .includes(). Force strings.
+        const name = String($row.data("name") ?? "");
+        const nat = String($row.data("nationality") ?? "");
 
         let visible = name.includes(search);
         if (country && nat !== country) visible = false;
