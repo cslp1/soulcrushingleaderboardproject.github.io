@@ -157,6 +157,28 @@ def static_files(filename):
 def favicon():
     return app.send_static_file("images/sclp.png")
 
+@app.route("/get_scotw")
+def get_scotw():
+    """
+    Current Soul Crushing Tower of the Day.
+
+    The Discord bot picks the tower and writes it to scotw!A2:B2
+    (A2 = tower id, B2 = unix timestamp of when it was picked).
+    The site only reads it.
+    """
+    try:
+        rows = sheet.values().get(
+            spreadsheetId=SHEET_ID, range="scotw!A2:B2"
+        ).execute().get("values", [])
+        if rows and len(rows[0]) >= 2:
+            tower_raw = str(rows[0][0]).strip()
+            time_raw = str(rows[0][1]).strip()
+            if tower_raw.isdigit() and time_raw.isdigit():
+                return jsonify({"Tower": tower_raw, "Time": time_raw})
+    except Exception as e:
+        print(f"get_scotw failed: {e}")
+    return jsonify({"Tower": None, "Time": None})
+
 def difficulty_to_name(d):
     if d < 900: return "Insane"
     if d < 1000: return "Extreme"
