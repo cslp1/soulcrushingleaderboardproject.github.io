@@ -699,3 +699,92 @@ if (params.get("t")) {
 } else if (params.get("p")) {
     open_pack(params.get("p"));
 }
+
+// ---------------------------------------------------------------------------
+// Soul Crushing Tower of the Day
+// The Discord bot picks the tower and writes it to the sheet; the site only
+// reads it. /get_scotw returns {Tower: "<id>", Time: "<unix seconds>"}.
+// ---------------------------------------------------------------------------
+
+let current_scotw = null;
+let scotw_timer = null;
+
+// misc.js defines `pages` and open_page(); add SCoTW to the nav from here.
+if (typeof pages !== "undefined" && !pages.includes("SCoTW")) {
+    pages.push("SCoTW");
+    $("#links").append(
+        `<button class="seamless-button" onclick="open_page('SCoTW')">SCoTW</button>`
+    );
+}
+
+function init_scotw() {
+    let tower = tower_lookup[parseInt(current_scotw.Tower)];
+    if (!tower) {
+        $("#scotw-title").removeAttr("class").text("No tower picked yet");
+        $("#scotw-timer").text("");
+        $("#scotw-details").hide();
+        return;
+    }
+
+    let diff = difficulty_to_name(tower.difficulty);
+    $("#scotw-title")
+        .attr("class", diff)
+        .html(`<button class="tower-button" onclick="open_tower(${tower.id})">${tower.name}</button>`);
+
+    $("#scotw-difficulty")
+        .attr("class", diff)
+        .text(`${formatNumber(tower.difficulty / 100)} (${difficulty_to_range(tower.difficulty)} ${diff})`);
+    $("#scotw-xp").text(formatNumber(tower.xp));
+    $("#scotw-victors").text(get_victors(tower.id));
+
+    let in_packs = packs.filter(p => p.towers.includes(String(tower.id)));
+    $("#scotw-packs").html(
+        in_packs.length
+            ? "Packs: " + in_packs.map(p =>
+                `<a href="javascript:void(0)" onclick="open_pack('${p.id}')">${p.name}</a>`
+              ).join(", ")
+            : ""
+    );
+
+    $("#scotw-details").show();
+    update_scotw_timer();
+}
+
+function update_scotw_timer() {
+    if (scotw_timer) clearTimeout(scotw_timer);
+
+    let start = parseInt(current_scotw.Time) * 1000;
+    if (!start) {
+        $("#scotw-timer").text("");
+        return;
+    }
+
+    let remaining = start + 24 * 60 * 60 * 1000 - Date.now();
+    if (remaining <= 0) {
+        $("#scotw-timer").text("Picking a new tower...");
+        return;
+    }
+
+    let h = Math.floor(remaining / 3600000);
+    let m = Math.floor((remaining % 3600000) / 60000);
+    let s = Math.floor((remaining % 60000) / 1000);
+    $("#scotw-timer").text(`New tower in: ${h}h ${m}m ${s}s`);
+
+    scotw_timer = setTimeout(update_scotw_timer, 1000);
+}
+
+fetch("/get_scotw")
+    .then(res => {
+        if (!res.ok) throw new Error(`/get_scotw returned ${res.status}`);
+        return res.json();
+    })
+    .then(data => {
+        current_scotw = data;
+        init_scotw();
+    })
+    .catch(err => {
+        console.error("SCoTW failed to load:", err);
+        $("#scotw-title").removeAttr("class").text("Couldn't load");
+        $("#scotw-timer").text(err.message);
+        $("#scotw-details").hide();
+    });
