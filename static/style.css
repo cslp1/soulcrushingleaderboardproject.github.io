@@ -731,3 +731,84 @@ p {
     text-decoration: line-through;
     color: #797981;
 }
+
+/* --- Soul Crushing Tower of the Day --- */
+#scotw-page {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 50px);
+    padding: 40px;
+    overflow-y: auto;
+}
+
+#scotw-container {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+#scotw-header {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+
+#scotw-label {
+    font-size: 0.9em;
+    letter-spacing: 3px;
+    color: #a0a8b0;
+    margin: 0;
+}
+
+#scotw-title {
+    font-size: 2.5em;
+    font-weight: bold;
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+#scotw-title .tower-button {
+    font-size: inherit;
+    color: inherit;
+    width: auto;
+    font-weight: bold;
+    text-align: center;
+    display: inline-block;
+    padding: 0 15px;
+}
+
+#scotw-timer {
+    font-size: 1.3em;
+    color: #a0a8b0;
+    margin: 0;
+    font-weight: 500;
+}
+
+#scotw-details {
+    background: linear-gradient(145deg, #1e2127, #252830);
+    border: 1px solid #303540;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 20px;
+}
+
+#scotw-details::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
