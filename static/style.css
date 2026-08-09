@@ -812,3 +812,28 @@ p {
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
 }
+
+/* --- Quality grades (matches the quality tab in the sheet) ---
+   The + and - must be backslash-escaped: a CSS class name can't contain
+   them unescaped, and the rule is silently ignored if you forget. */
+.quality-ss  { color: #FF00FF; font-weight: bold; }
+.quality-s\+ { color: #B026FF; font-weight: bold; }
+.quality-s   { color: #7B3FE4; font-weight: bold; }
+.quality-s\- { color: #5B4FE4; font-weight: bold; }
+.quality-a\+ { color: #4169E1; }
+.quality-a   { color: #3399FF; }
+.quality-a\- { color: #3AA0C0; }
+.quality-b\+ { color: #2E9E8F; }
+.quality-b   { color: #2FA24F; }
+.quality-b\- { color: #6BA83A; }
+.quality-c\+ { color: #A8A83A; }
+.quality-c   { color: #E8B923; }
+.quality-c\- { color: #E89923; }
+.quality-d\+ { color: #E88123; }
+.quality-d   { color: #E06A20; }
+.quality-d\- { color: #D9541C; }
+.quality-f\+ { color: #E03C28; }
+.quality-f   { color: #E00000; }
+.quality-f\- { color: #A31515; }
+.quality-x   { color: #FFFFFF; background: #000000; padding: 0 6px;
+               border-radius: 4px; font-weight: bold; }
