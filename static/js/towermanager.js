@@ -76,6 +76,10 @@ function init_towers() {
         let last;
         if (sort === "victors" || sort === "victors-asc") {
             last = `<span style="text-align: right;">${victors}</span>`;
+        } else if (sort === "quality" || sort === "quality-asc") {
+            last = t.quality
+                ? `<span class="quality-${t.quality.toLowerCase()}">${t.quality}</span>`
+                : `<span style="text-align: right;">—</span>`;
         } else {
             last = `<span class="${difficulty_to_name(diff * 100)}">${formatNumber(diff)}</span>`;
         }
