@@ -835,5 +835,4 @@ p {
 .quality-f\+ { color: #E03C28; }
 .quality-f   { color: #E00000; }
 .quality-f\- { color: #A31515; }
-.quality-x   { color: #FFFFFF; background: #000000; padding: 0 6px;
-               border-radius: 4px; font-weight: bold; }
+.quality-x   { color: #797981; font-weight: bold; }
