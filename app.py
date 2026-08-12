@@ -174,6 +174,8 @@ for p in packs:
     ids = [int(i) for i in p["towers"] if str(i).isdigit()]
     total = sum(tower_by_id[i]["xp"] for i in ids if i in tower_by_id)
     bonus = math.floor(total / len(ids)) if ids else 0
+    # the frontend reads pack.xp directly for display and sorting
+    p["xp"] = bonus
     pack_info.append((p["id"], set(ids), bonus))
 
 for c in all_completions:
