@@ -90,7 +90,7 @@
         min-width: 0;
     }
 
-    #sclp-tower-search, #sclp-player-search, #checklist-player, #game-select, #scotw-search {
+    #unified-search, #checklist-player, #game-select {
         font-size: 0.8em;
         height: 1.5em;
     }

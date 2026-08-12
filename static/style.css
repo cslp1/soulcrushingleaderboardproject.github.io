@@ -129,7 +129,7 @@ p {
     height: 100%;
 }
 
-#sclp-tower-search, #sclp-player-search, #checklist-player, #game-select {
+#unified-search, #checklist-player, #game-select {
     display: inline-block;
     vertical-align: middle;
     border: none;
@@ -168,7 +168,7 @@ p {
 }
 
 #leaderboard, #packs {
-    padding: 20px;
+    padding: 0;
 }
 
 #searchmenu-table, #leaderboard-table {
@@ -189,47 +189,40 @@ p {
 
 #searchmenu-table td:first-child {
     width: 60px;
-    text-align: center;
+    text-align: right;
     padding-right: 10px;
 }
 
 #leaderboard-table {
     padding: 30px;
+    padding-left: 0;
     border-collapse: separate;
-    border-spacing: 0 5px;
+    border-spacing: 20px 5px;
 }
 
 #leaderboard-table td:first-child {
     width: 60px;
-    text-align: center;
+    text-align: right;
     padding-right: 10px;
 }
 
 #packs-table {
     width: 100%;
     table-layout: fixed;
+    padding: 30px;
+    padding-left: 0;
     border-collapse: separate;
-    border-spacing: 0 5px;
-}
-
-#packs-table td {
-    padding: 8px 10px;
+    border-spacing: 20px 5px;
 }
 
 #packs-table td:first-child {
-    width: auto;
-    text-align: left;
-}
-
-#packs-table td:nth-child(2) {
-    width: 100px;
+    width: 60px;
     text-align: right;
-    white-space: nowrap;
+    padding-right: 10px;
 }
 
 #packs-table td:last-child {
-    width: 120px;
-    text-align: right;
+    width: 90px;
     white-space: nowrap;
 }
 
@@ -279,7 +272,24 @@ p {
     text-align: left;
 }
 
-.tower-button:hover, .tower-button-crossed:hover, .player-button:hover, .pack-button:hover {
+.pack-button-crossed {
+    font-size: 20px;
+    border-radius: 8px;
+    background: #00000000;
+    color: #FFFFFF20;
+    border: none;
+    padding: 0;
+    font-family: "Montserrat", sans-serif;
+    text-decoration: line-through;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+}
+
+.tower-button:hover, .tower-button-crossed:hover, .player-button:hover, .pack-button:hover, .pack-button-crossed:hover {
     background: #363840;
 }
 
@@ -309,10 +319,14 @@ p {
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
 }
 
-#options {
+#options, .options-grid {
     display: grid;
     grid-template-columns: 2fr 1fr;
     gap: 15px 20px;
+}
+
+#player-sort-filter, #pack-sort-filter {
+    grid-column: 2;
 }
 
 #right-panel {
@@ -344,7 +358,7 @@ p {
     white-space: nowrap;
 }
 
-#player-sort, #tower-sort, #game-select {
+#player-sort, #player-country, #tower-sort, #game-select, #pack-sort {
     display: inline-block;
     vertical-align: middle;
     border: none;
@@ -359,37 +373,54 @@ p {
     cursor: pointer;
 }
 
-#player-sort {
-    margin-left: 15px;
-    width: auto;
+#player-sort, #player-country {
+    margin-left: 0;
+    width: 100%;
+    font-size: 15px;
+    margin-top: 10px;
 }
 
-#country-filter {
-    margin-left: 15px;
-    width: auto;
+.sort-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+#tower-sort, #player-sort, #pack-sort {
+    font-size: 15px;
+    margin-top: 0;
+    margin-left: 0;
+    width: 100%;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.sort-dir-btn {
     display: inline-block;
     vertical-align: middle;
+    flex: 0 0 auto;
     border: none;
     border-radius: 8px;
+    width: 36px;
     height: 36px;
-    font-size: 20px;
+    font-size: 18px;
     background: #505A64;
-    padding: 2px 10px 2px 15px;
     color: #FFFFFF;
     font-family: "Montserrat", sans-serif;
     cursor: pointer;
+    padding: 0;
 }
 
-#tower-sort {
-    font-size: 15px;
-    margin-top: 10px;
-    width: 100%;
+.sort-dir-btn:hover {
+    background: #5c6773;
 }
 
 #game-select {
     width: 100%;
     padding: 2px;
     padding-left: 15px;
+    margin-top: 10px;
 }
 
 .Insane {
@@ -501,7 +532,7 @@ p {
     width: 80%;
 }
 
-#towervictorstable {
+#towervictorstable, #packvictorstable {
     width: 100%;
     max-width: 100%;
     table-layout: auto;
@@ -511,12 +542,27 @@ p {
 }
 
 #towervictorstable td,
-#towervictorstable th {
+#towervictorstable th,
+#packvictorstable td {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     padding: 3px 4px;
     line-height: 1.3em;
+}
+
+#packvictorstable td:first-child {
+    width: 80px;
+    text-align: center;
+}
+
+#packvictorstable td:nth-child(2) {
+    width: auto;
+}
+
+#packvictorstable td:last-child {
+    width: 100px;
+    text-align: right;
 }
 
 #playercompletions, #packtowers-table {
@@ -549,18 +595,6 @@ p {
     font-size: 1em;
 }
 
-#packtowers-table td {
-    padding: 5px 4px;
-    line-height: 1.4em;
-}
-
-#packs-header {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
 #playerpacks {
     font-size: 1em;
 }
@@ -581,6 +615,106 @@ p {
     border-radius: 4px;
     background-color: transparent;
     vertical-align: middle;
+}
+
+#scotw-page {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 50px);
+    padding: 40px;
+    overflow-y: auto;
+}
+
+#scotw-container {
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+#scotw-header {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+#scotw-title {
+    font-size: 2.5em;
+    font-weight: bold;
+    margin: 0;
+    letter-spacing: 2px;
+}
+
+#scotw-title .tower-button {
+    font-size: inherit;
+    color: inherit;
+    width: auto;
+    font-weight: bold;
+    text-align: center;
+    display: inline-block;
+    padding: 0 15px;
+}
+
+#scotw-timer {
+    font-size: 1.3em;
+    color: #a0a8b0;
+    margin: 0;
+    font-weight: 500;
+}
+
+#scotw-search-wrapper {
+    display: flex;
+    justify-content: center;
+}
+
+#scotw-leaderboard {
+    background: linear-gradient(145deg, #1e2127, #252830);
+    border: 1px solid #303540;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    position: relative;
+}
+
+#scotw-leaderboard::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+}
+
+#scotw-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 5px;
+}
+
+#scotw-table td {
+    padding: 8px 10px;
+}
+
+#scotw-table td:first-child {
+    width: 80px;
+    text-align: center;
+    font-weight: 500;
+}
+
+#scotw-table td:nth-child(2) {
+    width: auto;
+}
+
+#scotw-table td:last-child {
+    width: 120px;
+    text-align: right;
+    font-weight: 600;
 }
 
 #discord {
@@ -634,205 +768,13 @@ p {
     border: 2px solid transparent;
 }
 
-#packvictorstable {
-    width: 100%;
-    max-width: 100%;
-    table-layout: auto;
-    border-collapse: separate;
-    border-spacing: 0 5px;
-    font-size: 1em;
-}
-
-#packvictorstable td {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 5px 4px;
-    line-height: 1.3em;
-}
-
-#packvictorstable td:first-child {
-    width: 80px;
-    text-align: center;
-}
-
-#packvictorstable td:nth-child(2) {
-    width: auto;
-}
-
-#packvictorstable td:last-child {
-    width: 100px;
-    text-align: right;
-}
-
-/* --- Packs page controls --- */
-#sclp-pack-search {
-    display: inline-block;
-    vertical-align: middle;
-    border: none;
-    border-radius: 8px;
-    height: 36px;
-    font-size: 20px;
-    background: #505A64;
-    padding: 2px;
-    padding-left: 15px;
-    color: #FFFFFF;
-    font-family: "Montserrat", sans-serif;
-    letter-spacing: 1;
-    width: 100%;
-}
-
-#pack-sort-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-#pack-sort {
-    display: inline-block;
-    vertical-align: middle;
-    border: none;
-    border-radius: 8px;
-    height: 36px;
-    font-size: 20px;
-    background: #505A64;
-    padding: 2px 10px 2px 15px;
-    color: #FFFFFF;
-    font-family: "Montserrat", sans-serif;
-    letter-spacing: 1;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-#pack-sort-dir {
-    border: none;
-    border-radius: 8px;
-    height: 36px;
-    width: 36px;
-    flex-shrink: 0;
-    font-size: 20px;
-    background: #505A64;
-    color: #FFFFFF;
-    font-family: "Montserrat", sans-serif;
-    cursor: pointer;
-    transition: background 0.2s ease;
-}
-
-#pack-sort-dir:hover {
-    background: #606870;
-}
-
-/* --- Completed packs --- */
-.pack-completed {
-    opacity: 0.55;
-}
-
-.pack-completed .pack-button {
-    text-decoration: line-through;
-    color: #797981;
-}
-
-/* --- Soul Crushing Tower of the Day --- */
-#scotw-page {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    height: calc(100% - 50px);
-    padding: 40px;
-    overflow-y: auto;
-}
-
-#scotw-container {
-    max-width: 900px;
-    margin: 0 auto;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 30px;
-}
-
-#scotw-header {
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    align-items: center;
-}
-
-#scotw-label {
-    font-size: 0.9em;
-    letter-spacing: 3px;
-    color: #a0a8b0;
-    margin: 0;
-}
-
-#scotw-title {
-    font-size: 2.5em;
-    font-weight: bold;
-    margin: 0;
-    letter-spacing: 1px;
-}
-
-#scotw-title .tower-button {
-    font-size: inherit;
-    color: inherit;
-    width: auto;
-    font-weight: bold;
-    text-align: center;
-    display: inline-block;
-    padding: 0 15px;
-}
-
-#scotw-timer {
-    font-size: 1.3em;
-    color: #a0a8b0;
-    margin: 0;
-    font-weight: 500;
-}
-
-#scotw-details {
-    background: linear-gradient(145deg, #1e2127, #252830);
-    border: 1px solid #303540;
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    font-size: 20px;
-}
-
-#scotw-details::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-}
-
-/* --- Quality grades (matches the quality tab in the sheet) ---
-   The + and - must be backslash-escaped: a CSS class name can't contain
-   them unescaped, and the rule is silently ignored if you forget. */
-.quality-ss  { color: #FF00FF; font-weight: bold; }
-.quality-s\+ { color: #B026FF; font-weight: bold; }
-.quality-s   { color: #7B3FE4; font-weight: bold; }
-.quality-s\- { color: #5B4FE4; font-weight: bold; }
-.quality-a\+ { color: #4169E1; }
-.quality-a   { color: #3399FF; }
-.quality-a\- { color: #3AA0C0; }
-.quality-b\+ { color: #2E9E8F; }
-.quality-b   { color: #2FA24F; }
-.quality-b\- { color: #6BA83A; }
-.quality-c\+ { color: #A8A83A; }
-.quality-c   { color: #E8B923; }
-.quality-c\- { color: #E89923; }
-.quality-d\+ { color: #E88123; }
-.quality-d   { color: #E06A20; }
-.quality-d\- { color: #D9541C; }
-.quality-f\+ { color: #E03C28; }
-.quality-f   { color: #E00000; }
-.quality-f\- { color: #A31515; }
-.quality-x   { color: #797981; font-weight: bold; }
+.quality-ss      { color: #FF72DF; }
+.quality-s-plus  { color: #FF6BA3; }
+.quality-s       { color: #FF7F7F; }
+.quality-s-minus { color: #FF7F7F; }
+.quality-a       { color: #FEBF7F; }
+.quality-b  { color: #FFDF80; }
+.quality-c  { color: #FFFF7F; }
+.quality-d  { color: #C0FF7F; }
+.quality-f  { color: #7FFFFF; }
+.quality-x  { color: #797981; }
