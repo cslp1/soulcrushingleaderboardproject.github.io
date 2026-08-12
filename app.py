@@ -115,6 +115,83 @@ for pack in raw_packs:
         "towers": t
     })
 
+# ---------------------------------------------------------------------------
+# Precomputed lookups for the frontend.
+#
+# towermanager.js reads these directly in precompute_caches(); if any are
+# missing it throws and no page renders. Built once at startup from the
+# spreadsheet data above.
+# ---------------------------------------------------------------------------
+
+DIFFICULTY_NAMES = ["Insane", "Extreme", "Terrifying",
+                    "Catastrophic", "Horrific", "Unreal", "Nil"]
+
+
+def _difficulty_name(d):
+    if d < 900: return "Insane"
+    if d < 1000: return "Extreme"
+    if d < 1100: return "Terrifying"
+    if d < 1200: return "Catastrophic"
+    if d < 1300: return "Horrific"
+    if d < 1400: return "Unreal"
+    return "Nil"
+
+
+tower_by_id = {t["id"]: t for t in all_towers}
+
+# tower id -> how many players have beaten it
+victors_by_tower = {t["id"]: 0 for t in all_towers}
+for c in all_completions:
+    for tid in c["completions"]:
+        if tid in victors_by_tower:
+            victors_by_tower[tid] += 1
+
+# username -> difficulty of their hardest completion (0 if none)
+hardest_by_player = {}
+# username -> {"Insane": 3, "Extreme": 1, ...}
+diff_count_by_player = {}
+for c in all_completions:
+    hardest = 0
+    counts = {}
+    for tid in c["completions"]:
+        t = tower_by_id.get(tid)
+        if not t:
+            continue
+        if t["difficulty"] > hardest:
+            hardest = t["difficulty"]
+        name = _difficulty_name(t["difficulty"])
+        counts[name] = counts.get(name, 0) + 1
+    hardest_by_player[c["username"]] = hardest
+    diff_count_by_player[c["username"]] = counts
+
+# username -> bonus XP from fully completed packs
+# pack id -> [usernames who completed every tower in it]
+bonus_xp_by_player = {}
+pack_victors_by_pack = {p["id"]: [] for p in packs}
+
+pack_info = []
+for p in packs:
+    ids = [int(i) for i in p["towers"] if str(i).isdigit()]
+    total = sum(tower_by_id[i]["xp"] for i in ids if i in tower_by_id)
+    bonus = math.floor(total / len(ids)) if ids else 0
+    pack_info.append((p["id"], set(ids), bonus))
+
+for c in all_completions:
+    done = set(c["completions"])
+    bonus_total = 0
+    for pack_id, ids, bonus in pack_info:
+        if ids and ids <= done:
+            bonus_total += bonus
+            pack_victors_by_pack[pack_id].append(c["username"])
+    bonus_xp_by_player[c["username"]] = bonus_total
+    # total_xp = tower XP plus pack bonuses; the leaderboard sorts on this
+    c["total_xp"] = c["xp"] + bonus_total
+
+# rank by total_xp so the leaderboard order matches what it displays
+all_completions.sort(key=lambda x: x["total_xp"], reverse=True)
+for i, c in enumerate(all_completions):
+    c["rank"] = i + 1
+
 cool_members = []
 staff = funcs.get_data("credits!A:B")
 
@@ -143,7 +220,20 @@ def tower_data_csv():
 
 @app.route("/")
 def home():
-    return render_template("index.html", all_completions=all_completions, all_towers=all_towers, all_games=all_games, cool_members=cool_members, packs=packs, credits=staff)
+    return render_template(
+        "index.html",
+        all_completions=all_completions,
+        all_towers=all_towers,
+        all_games=all_games,
+        cool_members=cool_members,
+        packs=packs,
+        credits=staff,
+        victors_by_tower=victors_by_tower,
+        hardest_by_player=hardest_by_player,
+        diff_count_by_player=diff_count_by_player,
+        bonus_xp_by_player=bonus_xp_by_player,
+        pack_victors_by_pack=pack_victors_by_pack,
+    )
 
 @app.route("/static/<path:filename>")
 def static_files(filename):
