@@ -3,7 +3,12 @@ function tower_from_id(id) {
 }
 
 function player_from_name(name) {
-    return player_lookup[name] || false;
+    if (player_lookup[name]) return player_lookup[name];
+    const lower = name.toLowerCase();
+    for (const key in player_lookup) {
+        if (key.toLowerCase() === lower) return player_lookup[key];
+    }
+    return false;
 }
 
 function get_victors(id) {
@@ -14,7 +19,7 @@ function get_hardest_tower(x) {
     if (typeof x === 'string') {
         return hardest_cache[x] || 0;
     }
-    
+
     let highest_diff = 0;
     for (let id of x) {
         let tower = tower_lookup[id];
@@ -23,6 +28,22 @@ function get_hardest_tower(x) {
         }
     }
     return highest_diff;
+}
+
+function get_average_difficulty(tower_ids) {
+    let diffs = tower_ids.map(id => tower_lookup[id]).filter(Boolean).map(t => t.difficulty);
+    if (diffs.length === 0) return 0;
+    return diffs.reduce((a, b) => a + b, 0) / diffs.length;
+}
+
+function get_average_quality(tower_ids) {
+    let ranks = tower_ids.map(id => tower_lookup[id]).filter(t => t && t.quality != null).map(t => quality_order[t.quality]);
+    if (ranks.length === 0) return null;
+    let avg_rank = ranks.reduce((a, b) => a + b, 0) / ranks.length;
+    let nearest = Object.keys(quality_order).reduce((best, key) =>
+        Math.abs(quality_order[key] - avg_rank) < Math.abs(quality_order[best] - avg_rank) ? key : best
+    );
+    return nearest;
 }
 
 function get_pack_victors(pack_id) {
@@ -131,18 +152,141 @@ inputs.forEach(input => {
     input.setAttribute("spellcheck", false);
 });
 
-let pages = ["Home", "Towers", "Leaderboard", "Packs"];
+let pages = ["Home", "Towers", "Leaderboard", "Packs", "SCoTW"];
 for (let page of pages) {
     $("#links").append(`<button class="seamless-button" onclick="open_page('${page}')">${page}</button>`);
 }
 
+let current_page = "Home";
+let current_tower_id = null;
+let current_player_name = null;
+let current_pack_id = null;
+
+const search_targets = {
+    "Towers":      () => $("#unified-search").appendTo("#search-filter"),
+    "Leaderboard": () => $("#unified-search").appendTo("#leaderboard-search-slot"),
+    "Packs":       () => $("#unified-search").appendTo("#packs-search-slot"),
+    "SCoTW":       () => $("#unified-search").appendTo("#scotw-search-wrapper"),
+};
+
 function open_page(page_name) {
+    current_page = page_name;
     for (let page of pages) {
         $(`#${page.toLowerCase()}-page`).hide();
     }
     $(`#${page_name.toLowerCase()}-page`).css("display", "");
+    if (search_targets[page_name]) {
+        search_targets[page_name]();
+        $("#unified-search").val("");
+    }
+    sync_url();
 }
-open_page("Home");
+
+function sync_url() {
+    let query = null;
+    if (current_page === "Towers" && current_tower_id != null) {
+        query = `t=${current_tower_id}`;
+    } else if (current_page === "Leaderboard" && current_player_name != null) {
+        query = `u=${encodeURIComponent(current_player_name)}`;
+    } else if (current_page === "Packs" && current_pack_id != null) {
+        query = `pk=${current_pack_id}`;
+    } else if (current_page === "Home" || current_page === "SCoTW") {
+        query = `page=${current_page.toLowerCase()}`;
+    }
+    const newUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+    window.history.pushState({type: 'page', page: current_page}, '', newUrl);
+}
+
+function init_scotw() {
+    let scotw = tower_from_id(parseInt(current_scotw.Tower));
+    if (!scotw) {
+        $("#scotw-title").removeAttr("class").text("No tower picked yet");
+        $("#scotw-timer").text("");
+        $("#scotw-table").html("");
+        return;
+    }
+    let diff = difficulty_to_name(scotw.difficulty);
+
+    $("#scotw-title").attr("class", diff);
+    $("#scotw-title").html(`<button class="tower-button" onclick="open_tower(${scotw.id})">${scotw.name}</button>`);
+
+    const lb = (typeof scotw_points === "undefined" ? [] : scotw_points)
+        .map(p => ({ username: p.username, points: +p.points })).sort((a, b) => b.points - a.points || a.username.localeCompare(b.username));
+
+    let tbody = "";
+    lb.forEach((e, i) => {
+        const rank = i + 1;
+        tbody += `
+            <tr data-name="${e.username.toLowerCase()}">
+                <td>#${rank}</td>
+                <td><button class="player-button" onclick='open_player("${e.username}", ${rank})'>${get_role(e.username, true)}</button></td>
+                <td style="text-align:right;">${e.points} pts</td>
+            </tr>`;
+    });
+    $("#scotw-table").html(tbody);
+    filter_scotw();
+
+    updateTimer();
+}
+
+function filter_scotw() {
+    const q = $("#unified-search").val().toLowerCase();
+    $("#scotw-table tr").each(function () {
+        // jQuery .data() turns numeric-looking values into Numbers, and a purely
+        // numeric username would then break .includes(). Force a string.
+        const name = String($(this).data("name") ?? "");
+        $(this).toggle(name.includes(q));
+    });
+}
+
+// The Discord bot writes {Tower, Time} where Time is when the tower was picked.
+// Older backends sent {Target}, an absolute end time. Support both.
+const SCOTW_PERIOD_MS = 24 * 60 * 60 * 1000;
+
+function scotw_end_ms() {
+    if (current_scotw.Target) return parseInt(current_scotw.Target) * 1000;
+    if (current_scotw.Time) return parseInt(current_scotw.Time) * 1000 + SCOTW_PERIOD_MS;
+    return null;
+}
+
+function updateTimer() {
+    const end_ms = scotw_end_ms();
+    if (!end_ms) { $("#scotw-timer").text(""); return; }
+    const end = new Date(end_ms);
+    const now = new Date();
+
+    const diff = end - now;
+
+    if (diff <= 0) {
+        $("#scotw-timer").text("Updating...");
+        return;
+    }
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+    $("#scotw-timer").text(`Next tower in: ${days}d ${hours}h ${minutes}m ${seconds}s`);
+
+    setTimeout(updateTimer, 1000);
+}
+
+$("#unified-search").on("input", function() {
+    if (current_page === "Towers") filter_towers();
+    else if (current_page === "Leaderboard") filter_players();
+    else if (current_page === "Packs") filter_packs();
+    else if (current_page === "SCoTW") filter_scotw();
+});
+let current_scotw;
+let scotw_ready = false;
+fetch("/get_scotw").then(res => res.json()).then(data => {
+    current_scotw = data;
+    scotw_ready = true;
+    if (typeof tower_lookup !== "undefined" && tower_lookup[current_scotw.Tower]) {
+        init_scotw();
+    }
+})
 
 document.getElementById('discord').addEventListener('click', function() {
     window.open('https://discord.gg/t9crQndHyn', '_blank');
