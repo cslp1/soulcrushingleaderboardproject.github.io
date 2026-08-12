@@ -40,7 +40,7 @@
             </h2>
             <div id="credits"></div>
         </div>
-        <div id="towers-page">
+        <div id="towers-page" style="display:none;">
             <div id="left">
                 <div id="searchmenu">
                     <table id="searchmenu-table"></table>
@@ -50,8 +50,10 @@
                 <div id="right-panel">
                     <div id="options">
                         <h1>The List</h1>
+                        <!-- The single search box lives here and is moved between
+                             pages by search_targets in misc.js -->
                         <div class="filter-section" id="search-filter">
-                            <input type="text" id="sclp-tower-search" placeholder="Search...">
+                            <input type="text" id="unified-search" placeholder="Search...">
                         </div>
                         <div class="filter-section" id="difficulty-filter">
                             <p>Difficulty:</p>
@@ -65,16 +67,18 @@
                             </div>
                         </div>
                         <div class="filter-section" id="game-filter">
-                            <label>Game: <select name="game-select" id="game-select"></select></label>
-                            <label>Sort by: 
-                                <select id="tower-sort">
-                                    <option value="difficulty" selected>Difficulty (↓)</option>
-                                    <option value="difficulty-asc">Difficulty (↑)</option>
-                                    <option value="victors">Victors (↓)</option>
-                                    <option value="victors-asc">Victors (↑)</option>
-                                    <option value="quality">Quality (↓)</option>
-                                    <option value="quality-asc">Quality (↑)</option>
-                                </select>
+                            <label>Game:
+                                <select name="game-select" id="game-select"></select>
+                            </label>
+                            <label>Sort by:
+                                <div class="sort-row">
+                                    <select id="tower-sort">
+                                        <option value="difficulty" selected>Difficulty</option>
+                                        <option value="victors">Victors</option>
+                                        <option value="quality">Quality</option>
+                                    </select>
+                                    <button type="button" id="tower-sort-dir" class="sort-dir-btn" data-dir="desc" title="Toggle sort direction">&#8595;</button>
+                                </div>
                             </label>
                         </div>
                     </div>
@@ -97,7 +101,7 @@
                 </div>
             </div>
         </div>
-        <div id="leaderboard-page">
+        <div id="leaderboard-page" style="display:none;">
             <div id="left">
                 <div id="leaderboard">
                     <table id="leaderboard-table"></table>
@@ -105,23 +109,32 @@
             </div>
             <div id="right">
                 <div id="right-panel">
-                    <div id="leaderboard-header">
+                    <div class="options-grid">
                         <h1>The Top Obbyists</h1>
-                        <input type="text" id="sclp-player-search" placeholder="Search...">
-                        <select id="player-sort">
-                            <option value="xp">By Level/XP</option>
-                            <option value="completions">Most NSCs</option>
-                            <option value="hardest">Hardest Tower</option>
-                            <option value="most-insane">Most Insanes</option>
-                            <option value="most-extreme">Most Extremes</option>
-                            <option value="most-terrifying">Most Terrifyings</option>
-                            <option value="most-catastrophic">Most Catastrophics</option>
-                            <option value="most-horrific">Most Horrifics</option>
-                            <option value="most-unreal">Most Unreals</option>
-                        </select>
-                        <select id="country-filter">
-                            <option value="">All Countries</option>
-                        </select>
+                        <div class="filter-section" id="leaderboard-search-slot"></div>
+                        <div class="filter-section" id="player-sort-filter">
+                            <label>Sort by:
+                                <div class="sort-row">
+                                    <select id="player-sort">
+                                        <option value="xp">Level/XP</option>
+                                        <option value="completions">NSCs Beaten</option>
+                                        <option value="hardest">Hardest Tower</option>
+                                        <option value="most-insane">Insane Towers</option>
+                                        <option value="most-extreme">Extreme Towers</option>
+                                        <option value="most-terrifying">Terrifying Towers</option>
+                                        <option value="most-catastrophic">Catastrophic Towers</option>
+                                        <option value="most-horrific">Horrific Towers</option>
+                                        <option value="most-unreal">Unreal Towers</option>
+                                    </select>
+                                    <button type="button" id="player-sort-dir" class="sort-dir-btn" data-dir="desc" title="Toggle sort direction">&#8595;</button>
+                                </div>
+                            </label>
+                            <label>Country:
+                                <select id="player-country">
+                                    <option value="">All Countries</option>
+                                </select>
+                            </label>
+                        </div>
                     </div>
         
                     <div id="player-data">
@@ -144,7 +157,7 @@
                 </div>
             </div>
         </div>
-        <div id="packs-page">
+        <div id="packs-page" style="display:none;">
             <div id="left">
                 <div id="packs">
                     <table id="packs-table"></table>
@@ -152,19 +165,21 @@
             </div>
             <div id="right">
                 <div id="right-panel">
-                    <div id="packs-header">
+                    <div class="options-grid">
                         <h1>Packs</h1>
-                        <input type="text" id="sclp-pack-search" placeholder="Search...">
-                        <div id="pack-sort-row">
+                        <div class="filter-section" id="packs-search-slot"></div>
+                        <div class="filter-section" id="pack-sort-filter">
                             <label>Sort by:
-                                <select id="pack-sort">
-                                    <option value="xp" selected>Bonus XP</option>
-                                    <option value="count">Tower Count</option>
-                                    <option value="hardest">Hardest Tower</option>
-                                    <option value="quality">Quality</option>
-                                </select>
+                                <div class="sort-row">
+                                    <select id="pack-sort">
+                                        <option value="xp" selected>Bonus XP</option>
+                                        <option value="towers">Tower Count</option>
+                                        <option value="hardest">Hardest Tower</option>
+                                        <option value="quality">Quality</option>
+                                    </select>
+                                    <button type="button" id="pack-sort-dir" class="sort-dir-btn" data-dir="asc" title="Toggle sort direction">&#8593;</button>
+                                </div>
                             </label>
-                            <button id="pack-sort-dir" title="Toggle sort direction">&#8593;</button>
                         </div>
                     </div>
                     <div id="pack-data">
@@ -183,16 +198,10 @@
         <div id="scotw-page" style="display:none;">
             <div id="scotw-container">
                 <div id="scotw-header">
-                    <p id="scotw-label">SOUL CRUSHING TOWER OF THE DAY</p>
                     <h1 id="scotw-title">Loading...</h1>
                     <p id="scotw-timer"></p>
                 </div>
-                <div id="scotw-details">
-                    <p>Difficulty: <span id="scotw-difficulty"></span></p>
-                    <p>XP for completion: <span id="scotw-xp"></span></p>
-                    <p>Victors: <span id="scotw-victors"></span></p>
-                    <p id="scotw-packs"></p>
-                </div>
+                <div id="scotw-search-wrapper"></div>
             </div>
         </div>
     </div>
