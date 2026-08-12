@@ -213,6 +213,13 @@
         packs = {{ packs | tojson }};
         cool_members = {{ cool_members | tojson }};
         rawcredits = {{ credits | tojson }};
+
+        // Precomputed lookups — towermanager.js reads these in precompute_caches()
+        victors_by_tower = {{ victors_by_tower | tojson }};
+        hardest_by_player = {{ hardest_by_player | tojson }};
+        diff_count_by_player = {{ diff_count_by_player | tojson }};
+        bonus_xp_by_player = {{ bonus_xp_by_player | tojson }};
+        pack_victors_by_pack = {{ pack_victors_by_pack | tojson }};
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
