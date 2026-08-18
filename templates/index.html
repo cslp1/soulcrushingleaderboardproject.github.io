@@ -221,9 +221,33 @@
         bonus_xp_by_player = {{ bonus_xp_by_player | tojson }};
         pack_victors_by_pack = {{ pack_victors_by_pack | tojson }};
         role_by_username = {{ role_by_username | tojson }};
-        tower_victors_by_tower = {{ tower_victors_by_tower | tojson }};
         tier_totals_by_difficulty = {{ tier_totals_by_difficulty | tojson }};
-        player_completed_towers_by_player = {{ player_completed_towers_by_player | tojson }};
+
+        // These two are derived here rather than sent from the server: each is a
+        // reshuffle of `completions`, and embedding both added ~3.8 MB to this
+        // page, pushing it past Vercel's response limit. Building them takes a
+        // few milliseconds.
+        var tower_victors_by_tower = {};
+        var player_completed_towers_by_player = {};
+        (function () {
+            var diff = {};
+            for (var i = 0; i < towers.length; i++) diff[towers[i].id] = towers[i].difficulty;
+
+            for (var p = 0; p < completions.length; p++) {
+                var entry = completions[p];
+                var ids = [];
+                for (var j = 0; j < entry.completions.length; j++) {
+                    var tid = entry.completions[j];
+                    if (!(tid in diff)) continue;
+                    ids.push(tid);
+                    (tower_victors_by_tower[tid] || (tower_victors_by_tower[tid] = []))
+                        .push(entry.username);
+                }
+                // hardest first, matching what the profile page expects
+                ids.sort(function (a, b) { return diff[b] - diff[a]; });
+                player_completed_towers_by_player[entry.username] = ids;
+            }
+        })();
     </script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
