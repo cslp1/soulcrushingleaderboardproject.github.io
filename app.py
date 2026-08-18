@@ -13,7 +13,12 @@ import json
 load_dotenv()
 
 # --- Auth: using GOOGLE_SERVICE_ACCOUNT env variable ---
-service_json = json.loads(os.getenv("GOOGLE_SERVICE_ACCOUNT"))
+_raw_credentials = os.getenv("GOOGLE_SERVICE_ACCOUNT")
+if not _raw_credentials:
+    raise RuntimeError(
+        "GOOGLE_SERVICE_ACCOUNT is not set. Add it in the Vercel project's "
+        "Environment Variables and redeploy — without it nothing can start.")
+service_json = json.loads(_raw_credentials)
 credentials = service_account.Credentials.from_service_account_info(
     service_json,
     scopes=["https://www.googleapis.com/auth/spreadsheets"]
@@ -195,10 +200,8 @@ for i, c in enumerate(all_completions):
     c["rank"] = i + 1
 
 # username -> role, for the coloured staff names
+# (built from `staff` below so the credits tab is only fetched once)
 role_by_username = {}
-for entry in funcs.get_data("credits!A:B"):
-    if entry.get("username") and entry.get("role"):
-        role_by_username[entry["username"]] = entry["role"]
 
 # tower_victors_by_tower and player_completed_towers_by_player are derived
 # in the browser instead of here: each duplicates the whole completions
@@ -215,6 +218,9 @@ for t in all_towers:
 
 cool_members = []
 staff = funcs.get_data("credits!A:B")
+for entry in staff:
+    if entry.get("username") and entry.get("role"):
+        role_by_username[entry["username"]] = entry["role"]
 
 @app.route("/tower_data")
 def tower_data():
