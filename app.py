@@ -200,13 +200,10 @@ for entry in funcs.get_data("credits!A:B"):
     if entry.get("username") and entry.get("role"):
         role_by_username[entry["username"]] = entry["role"]
 
-# tower id -> [usernames who beat it], hardest players first
-# (all_completions is already sorted by total_xp)
-tower_victors_by_tower = {t["id"]: [] for t in all_towers}
-for c in all_completions:
-    for tid in c["completions"]:
-        if tid in tower_victors_by_tower:
-            tower_victors_by_tower[tid].append(c["username"])
+# tower_victors_by_tower and player_completed_towers_by_player are derived
+# in the browser instead of here: each duplicates the whole completions
+# dataset (~169k entries), and embedding both pushed the rendered page past
+# Vercel's ~6 MB response limit.
 
 # difficulty name -> how many towers exist at that tier
 tier_totals_by_difficulty = {}
@@ -214,12 +211,7 @@ for t in all_towers:
     name = _difficulty_name(t["difficulty"])
     tier_totals_by_difficulty[name] = tier_totals_by_difficulty.get(name, 0) + 1
 
-# username -> their completed tower ids, hardest first
-player_completed_towers_by_player = {}
-for c in all_completions:
-    ids = [i for i in c["completions"] if i in tower_by_id]
-    ids.sort(key=lambda i: tower_by_id[i]["difficulty"], reverse=True)
-    player_completed_towers_by_player[c["username"]] = ids
+
 
 cool_members = []
 staff = funcs.get_data("credits!A:B")
@@ -263,9 +255,7 @@ def home():
         bonus_xp_by_player=bonus_xp_by_player,
         pack_victors_by_pack=pack_victors_by_pack,
         role_by_username=role_by_username,
-        tower_victors_by_tower=tower_victors_by_tower,
         tier_totals_by_difficulty=tier_totals_by_difficulty,
-        player_completed_towers_by_player=player_completed_towers_by_player,
     )
 
 @app.route("/static/<path:filename>")
