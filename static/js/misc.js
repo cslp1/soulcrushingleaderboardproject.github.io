@@ -88,12 +88,14 @@ function getAbbr(x) {
 }
 
 function difficulty_to_name(d) {
-    if (d < 900) return "Insane";
-    if (d < 1000) return "Extreme";
-    if (d < 1100) return "Terrifying";
-    if (d < 1200) return "Catastrophic";
-    if (d < 1300) return "Horrific";
-    if (d < 1400) return "Unreal";
+    if (d < 100) return "Effortless";
+    if (d < 200) return "Easy";
+    if (d < 300) return "Medium";
+    if (d < 400) return "Hard";
+    if (d < 500) return "Difficult";
+    if (d < 600) return "Challenging";
+    if (d < 700) return "Intense";
+    if (d < 800) return "Remorseless";
     return "Nil";
 }
 
