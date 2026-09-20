@@ -26,9 +26,7 @@ credentials = service_account.Credentials.from_service_account_info(
 service = build("sheets", "v4", credentials=credentials)
 sheet = service.spreadsheets()
 
-# Read from the same env var utils/funcs.py uses, so the two can't drift apart.
-# The fallback is the Non-Soul Crushing sheet.
-SHEET_ID = os.getenv("SHEET_ID", "1ugNOaNbLGIcTzpBN9aZvNjsHYPuPzClcJb0WH7lAp4c")
+SHEET_ID = "1GcbxyVskhfp-reab4yksg74vlsEkMyZIWQE6AkA7jxE"
 
 app = Flask(__name__)
 
@@ -38,22 +36,6 @@ def add_no_cache_headers(response):
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
-
-
-# --- difficulty scale -------------------------------------------------------
-# Effortless through Remorseless, stored x100 (0-799).
-# Each tier reaches its headline XP at the top of its band and rises evenly
-# from the tier below, so 2.50 (mid Medium) is worth 7.
-TIER_NAMES = ["Effortless", "Easy", "Medium", "Hard",
-              "Difficult", "Challenging", "Intense", "Remorseless"]
-TIER_XP = [1, 5, 10, 17, 26, 50, 75, 100]
-
-
-def tower_xp_for(d):
-    t = min(max(d, 0) // 100, 7)
-    frac = (d - t * 100) / 99
-    prev = TIER_XP[t - 1] if t > 0 else 0
-    return max(1, math.floor(prev + frac * (TIER_XP[t] - prev)))
 
 def country_code(x):
     country = pycountry.countries.lookup(x)
@@ -81,7 +63,7 @@ for tower in all_towers:
         print(f"Skipping tower with bad id/difficulty: {tower.get('name', '?')}")
         continue
     valid_towers.append(tower)
-    tower["xp"] = tower_xp_for(tower["difficulty"])
+    tower["xp"] = math.floor((3 ** ((tower["difficulty"] - 800) / 100)) * 100)
     
     raw = tower.get("places", "").strip()
     if not raw or raw == ";":
@@ -146,15 +128,17 @@ for pack in raw_packs:
 # spreadsheet data above.
 # ---------------------------------------------------------------------------
 
+DIFFICULTY_NAMES = ["Insane", "Extreme", "Terrifying",
+                    "Catastrophic", "Horrific", "Unreal", "Nil"]
+
+
 def _difficulty_name(d):
-    if d < 100: return "Effortless"
-    if d < 200: return "Easy"
-    if d < 300: return "Medium"
-    if d < 400: return "Hard"
-    if d < 500: return "Difficult"
-    if d < 600: return "Challenging"
-    if d < 700: return "Intense"
-    if d < 800: return "Remorseless"
+    if d < 900: return "Insane"
+    if d < 1000: return "Extreme"
+    if d < 1100: return "Terrifying"
+    if d < 1200: return "Catastrophic"
+    if d < 1300: return "Horrific"
+    if d < 1400: return "Unreal"
     return "Nil"
 
 
@@ -169,7 +153,7 @@ for c in all_completions:
 
 # username -> difficulty of their hardest completion (0 if none)
 hardest_by_player = {}
-# username -> {"Easy": 3, "Medium": 1, ...}
+# username -> {"Insane": 3, "Extreme": 1, ...}
 diff_count_by_player = {}
 for c in all_completions:
     hardest = 0
@@ -315,14 +299,12 @@ def get_scotw():
     return jsonify({"Tower": None, "Time": None})
 
 def difficulty_to_name(d):
-    if d < 100: return "Effortless"
-    if d < 200: return "Easy"
-    if d < 300: return "Medium"
-    if d < 400: return "Hard"
-    if d < 500: return "Difficult"
-    if d < 600: return "Challenging"
-    if d < 700: return "Intense"
-    if d < 800: return "Remorseless"
+    if d < 900: return "Insane"
+    if d < 1000: return "Extreme"
+    if d < 1100: return "Terrifying"
+    if d < 1200: return "Catastrophic"
+    if d < 1300: return "Horrific"
+    if d < 1400: return "Unreal"
     return "Nil"
 
 if __name__ == "__main__":
