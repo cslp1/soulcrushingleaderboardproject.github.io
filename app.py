@@ -26,7 +26,9 @@ credentials = service_account.Credentials.from_service_account_info(
 service = build("sheets", "v4", credentials=credentials)
 sheet = service.spreadsheets()
 
-SHEET_ID = "1ugNOaNbLGIcTzpBN9aZvNjsHYPuPzClcJb0WH7lAp4c"
+# Read from the same env var utils/funcs.py uses, so the two can't drift apart.
+# The fallback is the Non-Soul Crushing sheet.
+SHEET_ID = os.getenv("SHEET_ID", "1ugNOaNbLGIcTzpBN9aZvNjsHYPuPzClcJb0WH7lAp4c")
 
 app = Flask(__name__)
 
@@ -144,10 +146,6 @@ for pack in raw_packs:
 # spreadsheet data above.
 # ---------------------------------------------------------------------------
 
-DIFFICULTY_NAMES = ["Insane", "Extreme", "Terrifying",
-                    "Catastrophic", "Horrific", "Unreal", "Nil"]
-
-
 def _difficulty_name(d):
     if d < 100: return "Effortless"
     if d < 200: return "Easy"
@@ -171,7 +169,7 @@ for c in all_completions:
 
 # username -> difficulty of their hardest completion (0 if none)
 hardest_by_player = {}
-# username -> {"Insane": 3, "Extreme": 1, ...}
+# username -> {"Easy": 3, "Medium": 1, ...}
 diff_count_by_player = {}
 for c in all_completions:
     hardest = 0
