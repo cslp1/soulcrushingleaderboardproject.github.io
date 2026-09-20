@@ -105,7 +105,7 @@ function filter_towers() {
         }
     }
 
-    for (let i = 0; i < 8; i++) {
+    for (let i = 8; i < 14; i++) {
         if ($("#diff-" + i).prop("checked")) {
             allowed_difficulties.push(i);
         }
@@ -143,8 +143,8 @@ function init_players() {
     let players = [...completions];
 
     const diff_sort_map = {
-        "most-effortless": "Effortless", "most-easy": "Easy", "most-medium": "Medium", "most-hard": "Hard",
-        "most-difficult": "Difficult", "most-challenging": "Challenging", "most-intense": "Intense", "most-remorseless": "Remorseless"
+        "most-insane": "Insane", "most-extreme": "Extreme", "most-terrifying": "Terrifying",
+        "most-catastrophic": "Catastrophic", "most-horrific": "Horrific", "most-unreal": "Unreal"
     };
 
     const sign = dir === "desc" ? 1 : -1;
