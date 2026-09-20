@@ -423,28 +423,37 @@ p {
     margin-top: 10px;
 }
 
-.Insane {
-    color: #003FFF;
+.Effortless {
+    color: #A6F09A;
 }
 
-.Extreme {
-    color: #009FFF;
+.Easy {
+    color: #76F447;
 }
 
-.Terrifying {
-    color: #00FFFF;
+.Medium {
+    color: #FFFF00;
 }
 
-.Catastrophic {
-    color: #FFFFFF;
+.Hard {
+    color: #FE7C00;
 }
 
-.Horrific {
-    color: #ECB2FA;
+.Difficult {
+    color: #FF3232;
 }
 
-.Unreal {
-    color: #9F3FFF;
+.Challenging {
+    color: #A00000;
+}
+
+.Intense {
+    color: #19222D;
+    text-shadow: 0 0 3px #5a6a80;
+}
+
+.Remorseless {
+    color: #C900C8;
 }
 
 .Nil {
