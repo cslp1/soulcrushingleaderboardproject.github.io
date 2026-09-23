@@ -224,6 +224,14 @@ function init_packs() {
     let dir = $("#pack-sort-dir").attr("data-dir") || "asc";
     let sign = dir === "desc" ? -1 : 1;
 
+    let sort_player = player_from_name($("#checklist-player").val());
+    // completion as a fraction 0-1; 0 when no player is selected
+    const pack_progress = pack => {
+        if (!sort_player || !pack.towers.length) return 0;
+        let done = pack.towers.filter(id => sort_player.completions.includes(parseInt(id))).length;
+        return done / pack.towers.length;
+    };
+
     let ranked_packs = [...packs].sort((a, b) => b.xp - a.xp);
     let rank_lookup = {};
     ranked_packs.forEach((pack, i) => rank_lookup[pack.id] = i + 1);
@@ -235,6 +243,8 @@ function init_packs() {
         sorted_packs.sort((a, b) => sign * (a.towers.length - b.towers.length));
     } else if (sort === "hardest") {
         sorted_packs.sort((a, b) => sign * (get_hardest_tower(a.towers.map(Number)) - get_hardest_tower(b.towers.map(Number))));
+    } else if (sort === "progress") {
+        sorted_packs.sort((a, b) => sign * (pack_progress(a) - pack_progress(b)) || a.xp - b.xp);
     } else if (sort === "quality") {
         sorted_packs = sorted_packs.filter(p => get_average_quality(p.towers.map(Number)) != null);
         sorted_packs.sort((a, b) => {
@@ -246,7 +256,7 @@ function init_packs() {
 
     let tbody = "";
     sorted_packs.forEach(pack => {
-        let player = player_from_name($("#checklist-player").val());
+        let player = sort_player;
         let completed_count = player ? pack.towers.filter(id => player.completions.includes(parseInt(id))).length : 0;
         let avg_diff = get_average_difficulty(pack.towers.map(Number));
 
@@ -256,6 +266,9 @@ function init_packs() {
             last = `<span class="${difficulty_to_name(hardest_diff)}">${formatNumber(hardest_diff / 100)}</span>`;
         } else if (sort === "towers") {
             last = `<span style="text-align: right;">${completed_count}/${pack.towers.length}</span>`;
+        } else if (sort === "progress") {
+            let pct = pack.towers.length ? (completed_count / pack.towers.length) * 100 : 0;
+            last = `<span style="text-align: right;">${pct.toFixed(1)}%</span>`;
         } else if (sort === "quality") {
             let avg_quality = get_average_quality(pack.towers.map(Number));
             last = `<span class="${quality_class(avg_quality)}">${avg_quality}</span>`;
