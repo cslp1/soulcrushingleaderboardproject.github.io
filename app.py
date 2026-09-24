@@ -1,268 +1,359 @@
-from flask import Flask, render_template, make_response, send_from_directory, jsonify
-import os
-from dotenv import load_dotenv
-import utils.funcs as funcs
+"""
+NSCLP site.
+
+Merged from the official SCLP-Web rewrite (TheHaloDeveloper) and this
+site's fork.
+
+Taken from SCLP-Web:
+  - difficulty tiers as one data table instead of an if-chain
+  - sheets fetched in parallel
+  - every lookup built in a single build() pass
+  - read-only access with the API key alone (no service account)
+  - periodic data refresh
+  - bad nationality entries skipped instead of crashing startup
+  - missing quality sent as null, which the frontend expects
+
+Fixed while merging (both versions had these):
+  - a username listed twice in comps now has both rows combined
+  - tied players get a stable order, so ranks don't shuffle on refresh
+  - usernames are trimmed, so ones with a trailing space can be found
+
+Kept from this site:
+  - the variable names the frontend templates read
+  - daily Tower of the Day, read from the sheet the Discord bot writes
+  - malformed tower rows skipped instead of crashing startup
+  - the two largest lookups built in the browser (see index.html),
+    because embedding them pushed the page past Vercel's response limit
+"""
+
 import math
-import pycountry
+import os
+import threading
 import time
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from datetime import datetime, timedelta, timezone
-import atexit
-import json
+from concurrent.futures import ThreadPoolExecutor
+
+import pycountry
+import requests
+from dotenv import load_dotenv
+from flask import (Flask, jsonify, make_response, render_template,
+                   send_from_directory)
+
 load_dotenv()
 
-# --- Auth: using GOOGLE_SERVICE_ACCOUNT env variable ---
-_raw_credentials = os.getenv("GOOGLE_SERVICE_ACCOUNT")
-if not _raw_credentials:
-    raise RuntimeError(
-        "GOOGLE_SERVICE_ACCOUNT is not set. Add it in the Vercel project's "
-        "Environment Variables and redeploy — without it nothing can start.")
-service_json = json.loads(_raw_credentials)
-credentials = service_account.Credentials.from_service_account_info(
-    service_json,
-    scopes=["https://www.googleapis.com/auth/spreadsheets"]
-)
-service = build("sheets", "v4", credentials=credentials)
-sheet = service.spreadsheets()
+# ===========================================================================
+# CONFIG — the only section that differs between sites
+# ===========================================================================
 
-SHEET_ID = "1GcbxyVskhfp-reab4yksg74vlsEkMyZIWQE6AkA7jxE"
+SHEET_ID = os.getenv("SHEET_ID", "1PCndMCuQkslsWITs19Q2YaLFa16XnpUZzts4npzCjtE")
+
+# (upper limit, name): a tower belongs to the first tier whose limit it's under
+DIFFS = [
+    (900, "Insane"),
+    (1000, "Extreme"),
+    (1100, "Terrifying"),
+    (1200, "Catastrophic"),
+    (1300, "Horrific"),
+    (1400, "Unreal"),
+    (float("inf"), "Nil"),
+]
+
+
+def tower_xp_for(difficulty):
+    return math.floor((3 ** ((difficulty - 800) / 100)) * 100)
+
+# ===========================================================================
+
+API_KEY = os.getenv("GOOGLE_SHEETS_API_KEY")
+REFRESH_SECONDS = int(os.getenv("REFRESH_SECONDS", "900"))   # 15 minutes
+SCOTW_PERIOD_SECONDS = 24 * 60 * 60                          # daily rotation
 
 app = Flask(__name__)
 
+
+def difficulty_to_name(d):
+    return next(name for limit, name in DIFFS if d < limit)
+
+
 @app.after_request
-def add_no_cache_headers(response):
+def no_cache(response):
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
     return response
 
-def country_code(x):
-    country = pycountry.countries.lookup(x)
-    return country.alpha_2.lower()
 
-all_completions = funcs.get_data("comps!A:C")
-all_towers = funcs.get_data("towers!A:G")
-all_games = funcs.get_data("games!A:C")
-countries = funcs.get_data("nationalities!A:B")
-countries_map = {}
+# ---------------------------------------------------------------------------
+# Sheet access
+# ---------------------------------------------------------------------------
 
-for c in countries:
-    if c["nationality"] and c["username"]:
-        countries_map[c["username"]] = country_code(c["nationality"])
-        
-for c in all_completions:
-    c["completions"] = list(set(c["completions"]))
+def get_data(r):
+    """Read a sheet range as a list of dicts keyed by the header row."""
+    if not API_KEY:
+        raise RuntimeError("GOOGLE_SHEETS_API_KEY is not set")
 
-valid_towers = []
-for tower in all_towers:
-    try:
-        tower["id"] = int(tower["id"])
-        tower["difficulty"] = int(tower["difficulty"])
-    except (ValueError, TypeError):
-        print(f"Skipping tower with bad id/difficulty: {tower.get('name', '?')}")
-        continue
-    valid_towers.append(tower)
-    tower["xp"] = math.floor((3 ** ((tower["difficulty"] - 800) / 100)) * 100)
-    
-    raw = tower.get("places", "").strip()
-    if not raw or raw == ";":
-        tower["places"] = []
-    else:
-        parts = [part.strip() for part in raw.split(";") if part.strip()]
-        if not parts:
-            tower["places"] = []
-        else:
-            parsed = [p.split(",") for p in parts if p]
-            if parsed == [[""]]:
-                tower["places"] = []
+    url = f"https://sheets.googleapis.com/v4/spreadsheets/{SHEET_ID}/values/{r}"
+    payload = requests.get(url, params={"key": API_KEY}, timeout=20).json()
+
+    # Surface API errors instead of silently returning an empty site
+    if "error" in payload:
+        raise RuntimeError(f"Sheets API error reading {r}: "
+                           f"{payload['error'].get('message', payload['error'])}")
+
+    values = payload.get("values", [])
+    if len(values) < 2:
+        return []
+
+    headers = [h.strip() for h in values[0]]
+    rows = []
+    for row in values[1:]:
+        item = {}
+        for i, header in enumerate(headers):
+            val = row[i] if i < len(row) else ""
+            if header.lower() == "completions":
+                item[header] = [int(x) for x in val.split(",") if x.strip().isdigit()]
             else:
-                tower["places"] = parsed
-    
-    if tower["game"] == "":
-        tower["game"] = None
-    else:
-        tower["places"].append(["Place", ""])
-    
-all_towers = valid_towers
-tower_xp = {t["id"]: t["xp"] for t in all_towers}
-for c in all_completions:
-    try:
-        c["nationality"] = countries_map[c["username"]]
-    except:
-        c["nationality"] = None
-    c["xp"] = sum(tower_xp.get(id, 0) for id in c["completions"])
-    
-all_completions.sort(key=lambda x: x["xp"], reverse=True)
-all_towers.sort(key=lambda x: x["id"], reverse=True)
-all_towers.sort(key=lambda x: x["difficulty"], reverse=True)
+                item[header] = val
+        rows.append(item)
+    return rows
 
-for t in range(len(all_towers)):
-    all_towers[t]["rank"] = t + 1
-for c in range(len(all_completions)):
-    all_completions[c]["rank"] = c + 1
-    
-raw_packs = funcs.get_data("packs!A:M")
-packs = []
-for pack in raw_packs:
-    if not pack["id"]:
-        continue
-    
-    t = []
-    for i in range(1, 11):
-        current = pack[f"tower{i}"]
-        if current != "":
-            t.append(current)
-            
-    packs.append({
-        "id": pack["id"],
-        "name": pack["name"],
-        "towers": t
-    })
+
+def country_code(name):
+    return pycountry.countries.lookup(name).alpha_2.lower()
+
+
+def parse_places(raw):
+    parts = [part.strip() for part in (raw or "").split(";") if part.strip()]
+    return [p.split(",") for p in parts]
+
 
 # ---------------------------------------------------------------------------
-# Precomputed lookups for the frontend.
-#
-# towermanager.js reads these directly in precompute_caches(); if any are
-# missing it throws and no page renders. Built once at startup from the
-# spreadsheet data above.
+# Build everything the page needs, in one pass
 # ---------------------------------------------------------------------------
 
-DIFFICULTY_NAMES = ["Insane", "Extreme", "Terrifying",
-                    "Catastrophic", "Horrific", "Unreal", "Nil"]
+def build():
+    ranges = ["comps!A:C", "towers!A:G", "games!A:C",
+              "nationalities!A:B", "packs!A:M", "credits!A:B"]
+    with ThreadPoolExecutor(max_workers=len(ranges)) as pool:
+        comps, raw_towers, games, countries, raw_packs, staff = pool.map(get_data, ranges)
 
+    # Nationalities — one unrecognised country shouldn't take the site down
+    # usernames are trimmed everywhere — the sheet has some with trailing spaces
+    flags = {}
+    for c in countries:
+        name = (c.get("username") or "").strip()
+        if name and c.get("nationality"):
+            try:
+                flags[name] = country_code(c["nationality"].strip())
+            except Exception:
+                pass
 
-def _difficulty_name(d):
-    if d < 900: return "Insane"
-    if d < 1000: return "Extreme"
-    if d < 1100: return "Terrifying"
-    if d < 1200: return "Catastrophic"
-    if d < 1300: return "Horrific"
-    if d < 1400: return "Unreal"
-    return "Nil"
-
-
-tower_by_id = {t["id"]: t for t in all_towers}
-
-# tower id -> how many players have beaten it
-victors_by_tower = {t["id"]: 0 for t in all_towers}
-for c in all_completions:
-    for tid in c["completions"]:
-        if tid in victors_by_tower:
-            victors_by_tower[tid] += 1
-
-# username -> difficulty of their hardest completion (0 if none)
-hardest_by_player = {}
-# username -> {"Insane": 3, "Extreme": 1, ...}
-diff_count_by_player = {}
-for c in all_completions:
-    hardest = 0
-    counts = {}
-    for tid in c["completions"]:
-        t = tower_by_id.get(tid)
-        if not t:
+    # Towers — skip malformed rows rather than failing the whole build
+    towers = []
+    for t in raw_towers:
+        try:
+            t["id"] = int(t["id"])
+            t["difficulty"] = int(t["difficulty"])
+        except (ValueError, TypeError, KeyError):
+            print(f"Skipping tower with bad id/difficulty: {t.get('name', '?')}")
             continue
-        if t["difficulty"] > hardest:
-            hardest = t["difficulty"]
-        name = _difficulty_name(t["difficulty"])
-        counts[name] = counts.get(name, 0) + 1
-    hardest_by_player[c["username"]] = hardest
-    diff_count_by_player[c["username"]] = counts
+        t["xp"] = tower_xp_for(t["difficulty"])
+        t["places"] = parse_places(t.get("places"))
+        if (t.get("game") or "") == "":
+            t["game"] = None
+        else:
+            t["places"].append(["Place", ""])
+        t["quality"] = (t.get("quality") or "").strip() or None
+        towers.append(t)
 
-# username -> bonus XP from fully completed packs
-# pack id -> [usernames who completed every tower in it]
-bonus_xp_by_player = {}
-pack_victors_by_pack = {p["id"]: [] for p in packs}
+    towers.sort(key=lambda t: (-t["difficulty"], -t["id"]))
+    for rank, t in enumerate(towers, 1):
+        t["rank"] = rank
+    tower_by_id = {t["id"]: t for t in towers}
 
-pack_info = []
-for p in packs:
-    ids = [int(i) for i in p["towers"] if str(i).isdigit()]
-    total = sum(tower_by_id[i]["xp"] for i in ids if i in tower_by_id)
-    bonus = math.floor(total / len(ids)) if ids else 0
-    # the frontend reads pack.xp directly for display and sorting
-    p["xp"] = bonus
-    pack_info.append((p["id"], set(ids), bonus))
+    # Players — a username listed twice gets both rows' completions combined,
+    # rather than one row silently replacing the other
+    by_name = {}
+    for p in comps:
+        name = (p.get("username") or "").strip()
+        if not name:
+            continue
+        if name in by_name:
+            by_name[name]["completions"] = list(set(by_name[name]["completions"])
+                                                | set(p.get("completions") or []))
+        else:
+            p["username"] = name
+            p["completions"] = list(p.get("completions") or [])
+            by_name[name] = p
 
-for c in all_completions:
-    done = set(c["completions"])
-    bonus_total = 0
-    for pack_id, ids, bonus in pack_info:
-        if ids and ids <= done:
-            bonus_total += bonus
-            pack_victors_by_pack[pack_id].append(c["username"])
-    bonus_xp_by_player[c["username"]] = bonus_total
-    # total_xp = tower XP plus pack bonuses; the leaderboard sorts on this
-    c["total_xp"] = c["xp"] + bonus_total
+    players = []
+    for p in by_name.values():
+        p["completions"] = sorted(set(p["completions"]))
+        p["nationality"] = flags.get(p["username"])
+        p["xp"] = sum(tower_by_id[i]["xp"] for i in p["completions"] if i in tower_by_id)
+        players.append(p)
 
-# rank by total_xp so the leaderboard order matches what it displays
-all_completions.sort(key=lambda x: x["total_xp"], reverse=True)
-for i, c in enumerate(all_completions):
-    c["rank"] = i + 1
+    # Packs — bonus is the average XP of every listed tower
+    packs = []
+    for pk in raw_packs:
+        if not (pk.get("id") or "").strip():
+            continue
+        ids = []
+        for i in range(1, 11):
+            v = (pk.get(f"tower{i}") or "").strip()
+            if v.isdigit():
+                ids.append(int(v))
+        total = sum(tower_by_id[i]["xp"] for i in ids if i in tower_by_id)
+        packs.append({"id": pk["id"], "name": pk.get("name", ""), "towers": ids,
+                      "xp": math.floor(total / len(ids)) if ids else 0})
+    packs.sort(key=lambda p: p["xp"])
 
-# username -> role, for the coloured staff names
-# (built from `staff` below so the credits tab is only fetched once)
-role_by_username = {}
+    # Per-tower and per-player lookups
+    victors_by_tower = {t["id"]: 0 for t in towers}
+    hardest_by_player = {}
+    diff_count_by_player = {}
+    for p in players:
+        hardest = 0
+        counts = {}
+        for i in p["completions"]:
+            t = tower_by_id.get(i)
+            if not t:
+                continue
+            victors_by_tower[i] += 1
+            hardest = max(hardest, t["difficulty"])
+            name = difficulty_to_name(t["difficulty"])
+            counts[name] = counts.get(name, 0) + 1
+        hardest_by_player[p["username"]] = hardest
+        diff_count_by_player[p["username"]] = counts
 
-# tower_victors_by_tower and player_completed_towers_by_player are derived
-# in the browser instead of here: each duplicates the whole completions
-# dataset (~169k entries), and embedding both pushed the rendered page past
-# Vercel's ~6 MB response limit.
+    # Pack completions and bonus XP
+    bonus_xp_by_player = {}
+    pack_victors_by_pack = {pk["id"]: [] for pk in packs}
+    for p in players:
+        done = set(p["completions"])
+        bonus = 0
+        for pk in packs:
+            if pk["towers"] and done.issuperset(pk["towers"]):
+                bonus += pk["xp"]
+                pack_victors_by_pack[pk["id"]].append(p["username"])
+        bonus_xp_by_player[p["username"]] = bonus
+        p["total_xp"] = p["xp"] + bonus
 
-# difficulty name -> how many towers exist at that tier
-tier_totals_by_difficulty = {}
-for t in all_towers:
-    name = _difficulty_name(t["difficulty"])
-    tier_totals_by_difficulty[name] = tier_totals_by_difficulty.get(name, 0) + 1
+    # Rank on total_xp so the leaderboard order matches what it displays.
+    # Ties break on name so tied players don't swap places on every refresh.
+    players.sort(key=lambda p: (-p["total_xp"], p["username"].lower()))
+    for rank, p in enumerate(players, 1):
+        p["rank"] = rank
+
+    tier_totals_by_difficulty = {}
+    for t in towers:
+        name = difficulty_to_name(t["difficulty"])
+        tier_totals_by_difficulty[name] = tier_totals_by_difficulty.get(name, 0) + 1
+
+    # First role listed wins, so an Owner row isn't overwritten by a later one
+    role_by_username = {}
+    for e in staff:
+        name = (e.get("username") or "").strip()
+        if name and e.get("role"):
+            role_by_username.setdefault(name, e["role"].strip())
+
+    # Keys match the variable names in templates/index.html
+    return {
+        "all_completions": players,
+        "all_towers": towers,
+        "all_games": games,
+        "packs": packs,
+        "credits": staff,
+        "cool_members": [],
+        "victors_by_tower": victors_by_tower,
+        "hardest_by_player": hardest_by_player,
+        "diff_count_by_player": diff_count_by_player,
+        "bonus_xp_by_player": bonus_xp_by_player,
+        "pack_victors_by_pack": pack_victors_by_pack,
+        "role_by_username": role_by_username,
+        "tier_totals_by_difficulty": tier_totals_by_difficulty,
+    }
 
 
+# ---------------------------------------------------------------------------
+# Refresh
+#
+# SCLP-Web uses a background thread that rebuilds hourly. That assumes a
+# long-running server; on Vercel, threads don't survive between requests.
+# Rebuilding on the first request after the data goes stale works on both.
+# ---------------------------------------------------------------------------
 
-cool_members = []
-staff = funcs.get_data("credits!A:B")
-for entry in staff:
-    if entry.get("username") and entry.get("role"):
-        role_by_username[entry["username"]] = entry["role"]
+_state = {"data": None, "built_at": 0.0}
+_lock = threading.Lock()
+
+
+def current_data():
+    if _state["data"] is not None and time.time() - _state["built_at"] < REFRESH_SECONDS:
+        return _state["data"]
+
+    with _lock:
+        # another request may have rebuilt while this one waited
+        if _state["data"] is not None and time.time() - _state["built_at"] < REFRESH_SECONDS:
+            return _state["data"]
+        try:
+            _state["data"] = build()
+            _state["built_at"] = time.time()
+        except Exception as e:
+            if _state["data"] is None:
+                raise
+            # keep serving the last good data, try again in a minute
+            print(f"Refresh failed, serving previous data: {e}")
+            _state["built_at"] = time.time() - REFRESH_SECONDS + 60
+    return _state["data"]
+
+
+try:
+    current_data()
+except Exception as e:
+    print(f"Initial build failed, will retry on first request: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Routes
+# ---------------------------------------------------------------------------
+
+@app.route("/")
+def home():
+    return render_template("index.html", **current_data())
+
 
 @app.route("/tower_data")
 def tower_data():
-    updated = funcs.get_data("towers!A:E")
-    return jsonify(updated)
+    return jsonify(get_data("towers!A:E"))
+
 
 @app.route("/tower_data_csv")
 def tower_data_csv():
-    updated = funcs.get_data("towers!A:E")
-    
-    sorted_towers = sorted(updated, key=lambda x: int(x["difficulty"]))
-    
-    csv_lines = ["difficulty,name"]
-    for tower in sorted_towers:
-        csv_lines.append(f'{tower["difficulty"]},{tower["name"]}')
-    
-    csv_content = "\n".join(csv_lines)
-    
-    response = make_response(csv_content)
+    rows = sorted(get_data("towers!A:E"), key=lambda x: int(x["difficulty"]))
+    lines = ["difficulty,name"] + [f'{t["difficulty"]},{t["name"]}' for t in rows]
+    response = make_response("\n".join(lines))
     response.headers['Content-Type'] = 'text/csv'
     response.headers['Content-Disposition'] = 'attachment; filename=tower_data.csv'
     return response
 
 
-@app.route("/")
-def home():
-    return render_template(
-        "index.html",
-        all_completions=all_completions,
-        all_towers=all_towers,
-        all_games=all_games,
-        cool_members=cool_members,
-        packs=packs,
-        credits=staff,
-        victors_by_tower=victors_by_tower,
-        hardest_by_player=hardest_by_player,
-        diff_count_by_player=diff_count_by_player,
-        bonus_xp_by_player=bonus_xp_by_player,
-        pack_victors_by_pack=pack_victors_by_pack,
-        role_by_username=role_by_username,
-        tier_totals_by_difficulty=tier_totals_by_difficulty,
-    )
+@app.route("/get_scotw")
+def get_scotw():
+    """
+    Current Tower of the Day. The Discord bot writes the tower id to scotw!A2
+    and a unix timestamp to B2; the site only reads them.
+    """
+    try:
+        rows = get_data("scotw!A:B")
+        if rows:
+            tower = str(rows[0].get("Tower", "")).strip()
+            started = str(rows[0].get("Time", "")).strip()
+            if tower.isdigit() and started.isdigit():
+                return jsonify({"Tower": tower, "Time": started,
+                                "Target": int(started) + SCOTW_PERIOD_SECONDS})
+    except Exception as e:
+        print(f"get_scotw failed: {e}")
+    return jsonify({"Tower": None, "Time": None, "Target": None})
+
 
 @app.route("/static/<path:filename>")
 def static_files(filename):
@@ -272,40 +363,11 @@ def static_files(filename):
     response.headers['Expires'] = '0'
     return response
 
+
 @app.route("/favicon.ico")
 def favicon():
     return app.send_static_file("images/sclp.png")
 
-@app.route("/get_scotw")
-def get_scotw():
-    """
-    Current Soul Crushing Tower of the Day.
-
-    The Discord bot picks the tower and writes it to scotw!A2:B2
-    (A2 = tower id, B2 = unix timestamp of when it was picked).
-    The site only reads it.
-    """
-    try:
-        rows = sheet.values().get(
-            spreadsheetId=SHEET_ID, range="scotw!A2:B2"
-        ).execute().get("values", [])
-        if rows and len(rows[0]) >= 2:
-            tower_raw = str(rows[0][0]).strip()
-            time_raw = str(rows[0][1]).strip()
-            if tower_raw.isdigit() and time_raw.isdigit():
-                return jsonify({"Tower": tower_raw, "Time": time_raw})
-    except Exception as e:
-        print(f"get_scotw failed: {e}")
-    return jsonify({"Tower": None, "Time": None})
-
-def difficulty_to_name(d):
-    if d < 900: return "Insane"
-    if d < 1000: return "Extreme"
-    if d < 1100: return "Terrifying"
-    if d < 1200: return "Catastrophic"
-    if d < 1300: return "Horrific"
-    if d < 1400: return "Unreal"
-    return "Nil"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True, port=5000)
